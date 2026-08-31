@@ -1,12 +1,14 @@
 package mint.app.data
 
 import android.content.Context
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLException
 import com.yausername.youtubedl_android.mapper.VideoFormat
+import java.io.File
 
 object YouTubeResolver {
 
@@ -16,12 +18,25 @@ object YouTubeResolver {
 
     fun init(context: Context) {
         if (initialized) return
+        val tag = "MintInit"
         try {
             appContext = context.applicationContext
+            val nativeDir = context.applicationInfo.nativeLibraryDir
+            Log.d(tag, "nativeLibDir=$nativeDir")
+            Log.d(tag, "libffmpeg.so exists=${File(nativeDir, "libffmpeg.so").exists()}")
+            Log.d(tag, "libffmpeg.zip.so exists=${File(nativeDir, "libffmpeg.zip.so").exists()}")
+            Log.d(tag, "libpython.zip.so exists=${File(nativeDir, "libpython.zip.so").exists()}")
+
             YoutubeDL.getInstance().init(appContext!!)
+            Log.d(tag, "yt-dlp init OK")
+
             FFmpeg.getInstance().init(appContext!!)
+            Log.d(tag, "ffmpeg init OK")
+
             initialized = true
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Log.e(tag, "init failed: ${e.javaClass.name}: ${e.message}", e)
+        }
     }
 
     suspend fun resolve(url: String): StreamInfo = withContext(Dispatchers.IO) {
