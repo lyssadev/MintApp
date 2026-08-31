@@ -50,8 +50,7 @@ class DownloadService : Service() {
             } catch (e: InterruptedException) {
                 Log.d(TAG, "download interrupted")
             } catch (e: Exception) {
-                Log.e(TAG, "onStartCommand caught: ${e.javaClass.name}: ${e.message}", e)
-                DownloadManager.onError(extractError(e.message))
+                DownloadManager.onError(e.message ?: "Download failed")
             } finally {
                 stopForeground(STOP_FOREGROUND_DETACH)
                 stopSelf()
@@ -70,13 +69,11 @@ class DownloadService : Service() {
     ) = withContext(Dispatchers.IO) {
         val fileName = buildFileName(title, format)
         val mime = mimeFor(format)
+
         val tempDir = File(cacheDir, "downloads")
-        Log.d(TAG, "cacheDir=$cacheDir")
-        Log.d(TAG, "tempDir=${tempDir.absolutePath} exists=${tempDir.exists()} before mkdirs")
-        val mkdirOk = tempDir.mkdirs()
-        Log.d(TAG, "mkdirs result=$mkdirOk tempDir exists=${tempDir.exists()} writable=${tempDir.canWrite()}")
+        tempDir.mkdirs()
         val tempFile = File(tempDir, fileName)
-        Log.d(TAG, "target: Download/$fileName -> temp=${tempFile.absolutePath}")
+        Log.d(TAG, "target: Download/$fileName -> ${tempFile.absolutePath}")
 
         try {
             val formatSelector = if (!hasAudio) "$formatId+bestaudio" else formatId
@@ -89,43 +86,28 @@ class DownloadService : Service() {
             request.addOption("--hls-prefer-ffmpeg")
             request.addOption("--retries", "10")
             request.addOption("--fragment-retries", "10")
-            request.addOption("--verbose")
-
-            Log.d(TAG, "request cmd: ${request.buildCommand().joinToString(" ")}")
 
             currentProcessId = "mint_download_${System.currentTimeMillis()}"
 
-            val callback: (Float, Long, String?) -> Unit = { progress, eta, line ->
+            val callback: (Float, Long, String?) -> Unit = { progress, eta, _ ->
                 val percent = progress.toInt().coerceIn(0, 100)
                 val downloaded = if (estimatedSize > 0) {
                     (progress / 100.0 * estimatedSize).toLong()
                 } else {
                     0L
                 }
-                if (line != null) Log.d(TAG, "ytdlp line: $line")
                 Log.d(TAG, "progress: $percent% | eta: ${eta}s")
                 DownloadManager.onProgress(percent, title, downloaded, estimatedSize, 0)
                 NotificationHelper.updateProgress(this@DownloadService, percent, title)
             }
 
             val t0 = System.nanoTime()
-            try {
-                YoutubeDL.getInstance().execute(request, currentProcessId, callback)
-            } catch (e: Exception) {
-                Log.e(TAG, "yt-dlp execute FAILED: ${e.javaClass.name}: ${e.message}", e)
-                throw e
-            }
+            YoutubeDL.getInstance().execute(request, currentProcessId, callback)
             val totalMs = (System.nanoTime() - t0) / 1_000_000
-            Log.d(TAG, "DONE: tempFile exists=${tempFile.exists()} size=${tempFile.length()}B in ${totalMs}ms")
-
-            if (!tempFile.exists()) {
-                Log.e(TAG, "temp file missing after download! listing dir:")
-                tempDir.listFiles()?.forEach { Log.e(TAG, "  - ${it.name} (${it.length()}B)") }
-                throw Exception("downloaded file not found at ${tempFile.absolutePath}")
-            }
+            Log.d(TAG, "DONE: ${tempFile.length()}B in ${totalMs}ms")
 
             val target = FileSaver.openForWrite(this@DownloadService, fileName, mime)
-            Log.d(TAG, "copying temp -> ${target.displayPath} | uri: ${target.uri}")
+            Log.d(TAG, "copying -> ${target.displayPath} | uri: ${target.uri}")
             tempFile.inputStream().use { input ->
                 target.outputStream.use { output ->
                     input.copyTo(output, 64 * 1024)
@@ -143,7 +125,6 @@ class DownloadService : Service() {
                 mime,
             )
         } catch (e: Exception) {
-            Log.e(TAG, "download FAILED: ${e.javaClass.name}: ${e.message}", e)
             if (tempFile.exists()) tempFile.delete()
             throw e
         }
@@ -177,24 +158,6 @@ class DownloadService : Service() {
         currentProcessId?.let { YoutubeDL.getInstance().destroyProcessById(it) }
         scope.cancel()
         super.onDestroy()
-    }
-
-    private fun extractError(raw: String?): String {
-        if (raw.isNullOrBlank()) return "Download failed"
-        val lines = raw.lines()
-        val interesting = lines.filter { line ->
-            line.contains("ERROR", ignoreCase = true) ||
-                line.contains("Error", ignoreCase = true) ||
-                line.contains("Traceback", ignoreCase = true) ||
-                line.contains("ENOENT", ignoreCase = true) ||
-                line.contains("No such file", ignoreCase = true) ||
-                line.contains("ffmpeg", ignoreCase = true)
-        }
-        return if (interesting.isNotEmpty()) {
-            interesting.takeLast(6).joinToString("\n").trim()
-        } else {
-            lines.takeLast(3).joinToString("\n").trim()
-        }
     }
 
     private fun buildFileName(title: String, format: String): String {
