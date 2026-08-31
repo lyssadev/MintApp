@@ -3,6 +3,7 @@ package mint.app.data
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLException
 import com.yausername.youtubedl_android.mapper.VideoFormat
@@ -18,6 +19,7 @@ object YouTubeResolver {
         try {
             appContext = context.applicationContext
             YoutubeDL.getInstance().init(appContext!!)
+            FFmpeg.getInstance().init(appContext!!)
             initialized = true
         } catch (_: Exception) { }
     }

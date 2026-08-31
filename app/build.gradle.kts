@@ -81,6 +81,7 @@ dependencies {
     implementation(libs.androidx.lifecycle.runtime.compose)
     implementation(libs.tabler.icons)
     implementation(libs.youtubedl.android)
+    implementation(libs.youtubedl.android.ffmpeg)
     implementation(libs.okhttp)
     implementation(libs.coil.compose)
     implementation(libs.coil.network.okhttp)
