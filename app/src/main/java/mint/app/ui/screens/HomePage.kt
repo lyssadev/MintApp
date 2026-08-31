@@ -85,52 +85,17 @@ private sealed interface ResolveState {
     data class Error(val message: String) : ResolveState
 }
 
+private object HomeSession {
+    var link by mutableStateOf("")
+    var state by mutableStateOf<ResolveState>(ResolveState.Idle)
+}
+
 @Composable
 fun HomePage(modifier: Modifier = Modifier) {
     val visibleState = remember {
         MutableTransitionState(false).apply { targetState = true }
     }
-    val shimmerTransition = rememberInfiniteTransition(label = "mintShimmer")
-    val shimmerProgress by shimmerTransition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 5000, easing = LinearEasing),
-        ),
-        label = "mintShimmerProgress",
-    )
-    var textWidthPx by remember { mutableStateOf(0f) }
 
-    val titleStyle = if (textWidthPx > 0f) {
-        val bandWidth = textWidthPx * 2f
-        val center = -bandWidth + shimmerProgress * (textWidthPx + 2f * bandWidth)
-        val base = MaterialTheme.colorScheme.onBackground
-        val sheen = if (base.luminance() < 0.5f) {
-            Color(0xFF6E6E6E)
-        } else {
-            Color(0xFF9E9E9E)
-        }
-        TextStyle(
-            fontFamily = RobotoMonoMedium,
-            fontWeight = FontWeight.Medium,
-            fontSize = 52.sp,
-            brush = Brush.linearGradient(
-                colors = listOf(base, base, sheen, base, base),
-                start = Offset(center - bandWidth / 2f, 0f),
-                end = Offset(center + bandWidth / 2f, 0f),
-            ),
-        )
-    } else {
-        TextStyle(
-            fontFamily = RobotoMonoMedium,
-            fontWeight = FontWeight.Medium,
-            fontSize = 52.sp,
-            color = MaterialTheme.colorScheme.onBackground,
-        )
-    }
-
-    var link by remember { mutableStateOf("") }
-    var state by remember { mutableStateOf<ResolveState>(ResolveState.Idle) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val downloadState by DownloadManager.state.collectAsState()
@@ -143,7 +108,7 @@ fun HomePage(modifier: Modifier = Modifier) {
     }
 
     val startDownload: (StreamOption) -> Unit = { option ->
-        val info = (state as? ResolveState.Success)?.info
+        val info = (HomeSession.state as? ResolveState.Success)?.info
         if (info != null) {
             DownloadManager.reset()
             DownloadService.start(
@@ -161,9 +126,9 @@ fun HomePage(modifier: Modifier = Modifier) {
     val resolve: (String) -> Unit = { url ->
         val trimmed = url.trim()
         if (trimmed.isNotEmpty()) {
-            state = ResolveState.Loading
+            HomeSession.state = ResolveState.Loading
             scope.launch {
-                state = try {
+                HomeSession.state = try {
                     ResolveState.Success(YouTubeResolver.resolve(trimmed))
                 } catch (e: Exception) {
                     ResolveState.Error(e.message ?: "Couldn't resolve link")
@@ -180,21 +145,20 @@ fun HomePage(modifier: Modifier = Modifier) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
-                .verticalScroll(rememberScrollState())
+                .verticalScroll(
+                    rememberScrollState(),
+                    overscrollEffect = null,
+                )
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top,
         ) {
             Spacer(modifier = Modifier.height(56.dp))
-            Text(
-                text = "Mint",
-                style = titleStyle,
-                onTextLayout = { textWidthPx = it.size.width.toFloat() },
-            )
+            ShimmerTitle()
             Spacer(modifier = Modifier.height(40.dp))
             OutlinedTextField(
-                value = link,
-                onValueChange = { link = it },
+                value = HomeSession.link,
+                onValueChange = { HomeSession.link = it },
                 modifier = Modifier.fillMaxWidth(),
                 placeholder = {
                     Text(
@@ -205,13 +169,13 @@ fun HomePage(modifier: Modifier = Modifier) {
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                keyboardActions = KeyboardActions(onSearch = { resolve(link) }),
+                keyboardActions = KeyboardActions(onSearch = { resolve(HomeSession.link) }),
                 trailingIcon = {
                     IconButton(onClick = {
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
                         if (!text.isNullOrBlank()) {
-                            link = text
+                            HomeSession.link = text
                             resolve(text)
                         }
                     }) {
@@ -231,7 +195,7 @@ fun HomePage(modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(20.dp))
-            when (val current = state) {
+            when (val current = HomeSession.state) {
                 ResolveState.Idle -> Unit
                 ResolveState.Loading -> {
                     CircularProgressIndicator(
@@ -300,6 +264,54 @@ fun HomePage(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(120.dp))
         }
     }
+}
+
+@Composable
+private fun ShimmerTitle() {
+    val shimmerTransition = rememberInfiniteTransition(label = "mintShimmer")
+    val shimmerProgress by shimmerTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 5000, easing = LinearEasing),
+        ),
+        label = "mintShimmerProgress",
+    )
+    var textWidthPx by remember { mutableStateOf(0f) }
+
+    val titleStyle = if (textWidthPx > 0f) {
+        val bandWidth = textWidthPx * 2f
+        val center = -bandWidth + shimmerProgress * (textWidthPx + 2f * bandWidth)
+        val base = MaterialTheme.colorScheme.onBackground
+        val sheen = if (base.luminance() < 0.5f) {
+            Color(0xFF6E6E6E)
+        } else {
+            Color(0xFF9E9E9E)
+        }
+        TextStyle(
+            fontFamily = RobotoMonoMedium,
+            fontWeight = FontWeight.Medium,
+            fontSize = 52.sp,
+            brush = Brush.linearGradient(
+                colors = listOf(base, base, sheen, base, base),
+                start = Offset(center - bandWidth / 2f, 0f),
+                end = Offset(center + bandWidth / 2f, 0f),
+            ),
+        )
+    } else {
+        TextStyle(
+            fontFamily = RobotoMonoMedium,
+            fontWeight = FontWeight.Medium,
+            fontSize = 52.sp,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+    }
+
+    Text(
+        text = "Mint",
+        style = titleStyle,
+        onTextLayout = { textWidthPx = it.size.width.toFloat() },
+    )
 }
 
 @Composable
