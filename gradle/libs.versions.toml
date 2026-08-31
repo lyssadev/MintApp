@@ -9,6 +9,10 @@ composeCompiler = "2.2.10"
 activityCompose = "1.13.0"
 lifecycle = "2.11.0"
 tablerIcons = "3.35.0"
+newpipeExtractor = "v0.26.5"
+okhttp = "4.12.0"
+coil = "3.4.0"
+desugarJdkLibsNio = "2.1.5"
 
 [libraries]
 androidx-core-ktx = { group = "androidx.core", name = "core-ktx", version.ref = "coreKtx" }
@@ -24,6 +28,11 @@ compose-material3 = { group = "androidx.compose.material3", name = "material3" }
 androidx-activity-compose = { group = "androidx.activity", name = "activity-compose", version.ref = "activityCompose" }
 androidx-lifecycle-runtime-compose = { group = "androidx.lifecycle", name = "lifecycle-runtime-compose", version.ref = "lifecycle" }
 tabler-icons = { group = "io.github.lyxnx.compose.ui", name = "tabler-icons-android", version.ref = "tablerIcons" }
+newpipe-extractor = { group = "com.github.TeamNewPipe", name = "NewPipeExtractor", version.ref = "newpipeExtractor" }
+okhttp = { group = "com.squareup.okhttp3", name = "okhttp", version.ref = "okhttp" }
+coil-compose = { group = "io.coil-kt.coil3", name = "coil-compose", version.ref = "coil" }
+coil-network-okhttp = { group = "io.coil-kt.coil3", name = "coil-network-okhttp", version.ref = "coil" }
+desugar-jdk-libs-nio = { group = "com.android.tools", name = "desugar_jdk_libs_nio", version.ref = "desugarJdkLibsNio" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

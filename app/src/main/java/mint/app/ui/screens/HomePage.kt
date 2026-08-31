@@ -1,5 +1,7 @@
 package mint.app.ui.screens
 
+import android.content.ClipboardManager
+import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -17,7 +19,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -27,20 +34,34 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.graphics.luminance
 import io.github.lyxnx.compose.ui.tablericons.TablerIcons
 import io.github.lyxnx.compose.ui.tablericons.outline.Clipboard
+import kotlinx.coroutines.launch
+import mint.app.data.StreamInfo
+import mint.app.data.YouTubeResolver
+import mint.app.ui.components.StreamInfoCard
 import mint.app.ui.theme.RobotoMonoMedium
+
+private sealed interface ResolveState {
+    data object Idle : ResolveState
+    data object Loading : ResolveState
+    data class Success(val info: StreamInfo) : ResolveState
+    data class Error(val message: String) : ResolveState
+}
 
 @Composable
 fun HomePage(modifier: Modifier = Modifier) {
@@ -86,6 +107,25 @@ fun HomePage(modifier: Modifier = Modifier) {
         )
     }
 
+    var link by remember { mutableStateOf("") }
+    var state by remember { mutableStateOf<ResolveState>(ResolveState.Idle) }
+    val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+
+    val resolve: (String) -> Unit = { url ->
+        val trimmed = url.trim()
+        if (trimmed.isNotEmpty()) {
+            state = ResolveState.Loading
+            scope.launch {
+                state = try {
+                    ResolveState.Success(YouTubeResolver.resolve(trimmed))
+                } catch (e: Exception) {
+                    ResolveState.Error(e.message ?: "Couldn't resolve link")
+                }
+            }
+        }
+    }
+
     AnimatedVisibility(
         visibleState = visibleState,
         enter = fadeIn(animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing)),
@@ -94,6 +134,7 @@ fun HomePage(modifier: Modifier = Modifier) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .verticalScroll(rememberScrollState())
                 .padding(horizontal = 24.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
@@ -105,7 +146,6 @@ fun HomePage(modifier: Modifier = Modifier) {
                 onTextLayout = { textWidthPx = it.size.width.toFloat() },
             )
             Spacer(modifier = Modifier.height(40.dp))
-            var link by remember { mutableStateOf("") }
             OutlinedTextField(
                 value = link,
                 onValueChange = { link = it },
@@ -118,8 +158,17 @@ fun HomePage(modifier: Modifier = Modifier) {
                 },
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                keyboardActions = KeyboardActions(onSearch = { resolve(link) }),
                 trailingIcon = {
-                    IconButton(onClick = {}) {
+                    IconButton(onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
+                        if (!text.isNullOrBlank()) {
+                            link = text
+                            resolve(text)
+                        }
+                    }) {
                         Icon(
                             imageVector = TablerIcons.Outline.Clipboard,
                             contentDescription = "Paste from clipboard",
@@ -135,6 +184,28 @@ fun HomePage(modifier: Modifier = Modifier) {
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
+            Spacer(modifier = Modifier.height(20.dp))
+            when (val current = state) {
+                ResolveState.Idle -> Unit
+                ResolveState.Loading -> {
+                    CircularProgressIndicator(
+                        modifier = Modifier.size(32.dp),
+                        strokeWidth = 3.dp,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                }
+                is ResolveState.Error -> {
+                    Text(
+                        text = current.message,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                is ResolveState.Success -> {
+                    StreamInfoCard(info = current.info)
+                }
+            }
+            Spacer(modifier = Modifier.height(120.dp))
         }
     }
 }
