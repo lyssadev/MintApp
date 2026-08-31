@@ -1,6 +1,7 @@
 package mint.app.data
 
 data class StreamInfo(
+    val originalUrl: String,
     val title: String,
     val uploader: String,
     val thumbnailUrl: String?,
@@ -14,8 +15,10 @@ data class StreamInfo(
 data class StreamOption(
     val label: String,
     val format: String,
+    val formatId: String,
     val url: String,
     val estimatedSizeBytes: Long = 0,
     val throttled: Boolean = false,
+    val hasAudio: Boolean = true,
     val httpHeaders: Map<String, String> = emptyMap(),
 )

@@ -45,6 +45,7 @@ object YouTubeResolver {
             }
 
             val isMusicOnly = videoFormats.isEmpty()
+            val durationSec = (info.duration ?: 0).toLong()
 
             val videoOptions = videoFormats
                 .sortedWith(
@@ -57,10 +58,11 @@ object YouTubeResolver {
                     StreamOption(
                         label = label,
                         format = format.ext ?: "mp4",
+                        formatId = format.formatId ?: "",
                         url = format.url ?: "",
-                        estimatedSizeBytes = format.fileSize
-                            ?: (format.fileSizeApproximate ?: 0L),
+                        estimatedSizeBytes = estimateSize(format, durationSec),
                         throttled = false,
+                        hasAudio = (format.acodec ?: "none") != "none",
                         httpHeaders = format.httpHeaders ?: emptyMap(),
                     )
                 }
@@ -72,10 +74,11 @@ object YouTubeResolver {
                     StreamOption(
                         label = label,
                         format = format.ext ?: "m4a",
+                        formatId = format.formatId ?: "",
                         url = format.url ?: "",
-                        estimatedSizeBytes = format.fileSize
-                            ?: (format.fileSizeApproximate ?: 0L),
+                        estimatedSizeBytes = estimateSize(format, durationSec),
                         throttled = false,
+                        hasAudio = true,
                         httpHeaders = format.httpHeaders ?: emptyMap(),
                     )
                 }
@@ -83,6 +86,7 @@ object YouTubeResolver {
                 .take(4)
 
             StreamInfo(
+                originalUrl = url,
                 title = info.title ?: "Unknown",
                 uploader = info.uploader ?: "Unknown",
                 thumbnailUrl = info.thumbnail,
@@ -97,6 +101,18 @@ object YouTubeResolver {
         } catch (e: InterruptedException) {
             throw Exception("Request cancelled", e)
         }
+    }
+
+    private fun estimateSize(format: VideoFormat, durationSeconds: Long): Long {
+        when {
+            format.fileSize > 0 -> return format.fileSize
+            format.fileSizeApproximate > 0 -> return format.fileSizeApproximate
+        }
+        val tbr = format.tbr
+        if (tbr > 0 && durationSeconds > 0) {
+            return tbr.toLong() * 1000L / 8L * durationSeconds
+        }
+        return 0L
     }
 
     private fun buildVideoLabel(format: VideoFormat): String {

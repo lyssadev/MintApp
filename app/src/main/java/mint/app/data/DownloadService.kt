@@ -11,43 +11,44 @@ import android.os.Vibrator
 import android.os.VibratorManager
 import android.util.Log
 import androidx.core.content.ContextCompat
+import com.yausername.youtubedl_android.YoutubeDL
+import com.yausername.youtubedl_android.YoutubeDLRequest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import java.io.BufferedOutputStream
-import java.io.IOException
-import java.io.InputStream
-import java.io.OutputStream
-import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.withContext
+import java.io.File
 
 class DownloadService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private val client = OkHttpClient.Builder()
-        .readTimeout(60, TimeUnit.SECONDS)
-        .build()
-    private val downloadBuffer = ByteArray(64 * 1024) // 64KB buffer
+    private var currentProcessId: String? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val url = intent?.getStringExtra(EXTRA_URL) ?: run { stopSelf(); return START_NOT_STICKY }
+        val originalUrl = intent?.getStringExtra(EXTRA_ORIGINAL_URL)
+            ?: run { stopSelf(); return START_NOT_STICKY }
+        val formatId = intent.getStringExtra(EXTRA_FORMAT_ID)
+            ?: run { stopSelf(); return START_NOT_STICKY }
         val title = intent.getStringExtra(EXTRA_TITLE) ?: "Download"
         val format = intent.getStringExtra(EXTRA_FORMAT) ?: "mp4"
-        @Suppress("UNCHECKED_CAST")
-        val headers = intent.getSerializableExtra(EXTRA_HEADERS) as? HashMap<String, String> ?: HashMap()
+        val estimatedSize = intent.getLongExtra(EXTRA_ESTIMATED_SIZE, 0L)
+        val hasAudio = intent.getBooleanExtra(EXTRA_HAS_AUDIO, true)
 
         NotificationHelper.createChannel(this)
         startForegroundCompat(NotificationHelper.buildDownloading(this, title, 0))
-        DownloadManager.onProgress(0, title)
+        DownloadManager.onPreparing(title)
 
         scope.launch {
             try {
-                download(url, title, format, headers)
+                download(originalUrl, formatId, title, format, estimatedSize, hasAudio)
+            } catch (e: YoutubeDL.CanceledException) {
+                Log.d(TAG, "download cancelled")
+            } catch (e: InterruptedException) {
+                Log.d(TAG, "download interrupted")
             } catch (e: Exception) {
                 DownloadManager.onError(e.message ?: "Download failed")
             } finally {
@@ -58,108 +59,75 @@ class DownloadService : Service() {
         return START_NOT_STICKY
     }
 
-    private suspend fun download(url: String, title: String, format: String, headers: Map<String, String>) {
+    private suspend fun download(
+        originalUrl: String,
+        formatId: String,
+        title: String,
+        format: String,
+        estimatedSize: Long,
+        hasAudio: Boolean,
+    ) = withContext(Dispatchers.IO) {
         val fileName = buildFileName(title, format)
         val mime = mimeFor(format)
-        val tag = "MintDownload"
 
-        val target = FileSaver.openForWrite(this, fileName, mime)
-        Log.d(tag, "target: ${target.displayPath} | uri: ${target.uri} | SDK>=29: ${Build.VERSION.SDK_INT >= 29}")
+        val tempDir = File(cacheDir, "downloads")
+        tempDir.mkdirs()
+        val tempFile = File(tempDir, fileName)
+        Log.d(TAG, "target: Download/$fileName")
+
         try {
-            val t0 = System.nanoTime()
-            val reqBuilder = Request.Builder().url(url)
-            headers.forEach { (key, value) -> reqBuilder.addHeader(key, value) }
-            val response = client.newCall(reqBuilder.build()).execute()
-            if (!response.isSuccessful) {
-                throw IOException("HTTP ${response.code}")
-            }
-            response.use { resp ->
-                val body = resp.body ?: throw IOException("Empty response body")
-                val total = body.contentLength()
-                val finalUrl = resp.request.url.toString()
-                Log.d(tag, "HTTP ${resp.code} | Content-Length: $total | final url: $finalUrl")
-                val input: InputStream = body.byteStream()
-                val output: OutputStream = BufferedOutputStream(target.outputStream, 64 * 1024)
-                val buffer = downloadBuffer
-                var downloaded = 0L
-                var lastNotify = 0L
-                var readNs = 0L
-                var writeNs = 0L
-                var firstByte = false
+            val formatSelector = if (!hasAudio) "$formatId+bestaudio" else formatId
+            val request = YoutubeDLRequest(originalUrl)
+            request.addOption("-f", formatSelector)
+            request.addOption("-o", tempFile.absolutePath)
+            request.addOption("--no-mtime")
+            request.addOption("--no-playlist")
+            request.addOption("--throttled-rate", "100K")
+            request.addOption("--concurrent-fragments", "8")
+            request.addOption("--retries", "10")
+            request.addOption("--fragment-retries", "10")
 
-                try {
-                    var lastBytes = 0L
-                    var lastLog = 0L
-                    var lastReadNs = 0L
-                    var lastWriteNs = 0L
-                    while (true) {
-                        val tRead = System.nanoTime()
-                        val read = input.read(buffer)
-                        val dRead = System.nanoTime() - tRead
-                        readNs += dRead
-                        if (read < 0) break
-                        if (!firstByte) {
-                            firstByte = true
-                            Log.d(tag, "TTFB (first byte): ${(System.nanoTime() - t0) / 1_000_000}ms")
-                        }
-                        val tWrite = System.nanoTime()
-                        output.write(buffer, 0, read)
-                        writeNs += System.nanoTime() - tWrite
-                        downloaded += read
-                        val percent = if (total > 0) {
-                            ((downloaded * 100) / total).toInt()
-                        } else {
-                            -1
-                        }
-                        val now = System.currentTimeMillis()
-                        if (percent >= 0 && now - lastNotify >= 250) {
-                            val elapsed = now - lastNotify
-                            val delta = downloaded - lastBytes
-                            val speed = if (elapsed > 0) (delta * 1000 / elapsed) else 0L
-                            lastNotify = now
-                            lastBytes = downloaded
-                            DownloadManager.onProgress(percent, title, downloaded, total, speed)
-                            NotificationHelper.updateProgress(this, percent, title)
-                        }
-                        if (now - lastLog >= 500) {
-                            val readRatio = readNs - lastReadNs
-                            val writeRatio = writeNs - lastWriteNs
-                            val sum = readRatio + writeRatio
-                            if (sum > 0) {
-                                Log.d(tag, "progress: $downloaded/$total bytes | read ${readRatio * 100 / sum}% | write ${writeRatio * 100 / sum}%")
-                            }
-                            lastLog = now
-                            lastReadNs = readNs
-                            lastWriteNs = writeNs
-                        }
-                    }
-                } finally {
-                    output.flush()
-                    output.close()
+            currentProcessId = "mint_download_${System.currentTimeMillis()}"
+
+            val callback: (Float, Long, String?) -> Unit = { progress, eta, _ ->
+                val percent = progress.toInt().coerceIn(0, 100)
+                val downloaded = if (estimatedSize > 0) {
+                    (progress / 100.0 * estimatedSize).toLong()
+                } else {
+                    0L
                 }
-                val totalNs = System.nanoTime() - t0
-                Log.d(tag, "DONE: ${downloaded}B in ${totalNs / 1_000_000}ms | " +
-                    "read ${readNs / 1_000_000}ms | write ${writeNs / 1_000_000}ms | " +
-                    "avg read bytes: ${if (downloaded > 0) downloaded / (readNs / 1_000_000 + 1) else 0} B/ms")
+                Log.d(TAG, "progress: $percent% | eta: ${eta}s")
+                DownloadManager.onProgress(percent, title, downloaded, estimatedSize, 0)
+                NotificationHelper.updateProgress(this@DownloadService, percent, title)
             }
+
+            val t0 = System.nanoTime()
+            YoutubeDL.getInstance().execute(request, currentProcessId, callback)
+            val totalMs = (System.nanoTime() - t0) / 1_000_000
+            Log.d(TAG, "DONE: ${tempFile.length()}B in ${totalMs}ms")
+
+            val target = FileSaver.openForWrite(this@DownloadService, fileName, mime)
+            Log.d(TAG, "copying temp -> ${target.displayPath} | uri: ${target.uri}")
+            tempFile.inputStream().use { input ->
+                target.outputStream.use { output ->
+                    input.copyTo(output, 64 * 1024)
+                }
+            }
+            tempFile.delete()
+
+            DownloadManager.onComplete(fileName, target.displayPath)
+            vibrate()
+            NotificationHelper.notifyComplete(
+                this@DownloadService,
+                title,
+                fileName,
+                target.uri,
+                mime,
+            )
         } catch (e: Exception) {
-            target.uri?.let { uri ->
-                runCatching {
-                    contentResolver.delete(uri, null, null)
-                }
-            }
+            if (tempFile.exists()) tempFile.delete()
             throw e
         }
-
-        DownloadManager.onComplete(fileName, target.displayPath)
-        vibrate()
-        NotificationHelper.notifyComplete(
-            this,
-            title,
-            fileName,
-            target.uri,
-            mime,
-        )
     }
 
     private fun startForegroundCompat(notification: android.app.Notification) {
@@ -187,6 +155,7 @@ class DownloadService : Service() {
     }
 
     override fun onDestroy() {
+        currentProcessId?.let { YoutubeDL.getInstance().destroyProcessById(it) }
         scope.cancel()
         super.onDestroy()
     }
@@ -213,17 +182,30 @@ class DownloadService : Service() {
     }
 
     companion object {
-        private const val EXTRA_URL = "url"
+        private const val TAG = "MintDownload"
+        private const val EXTRA_ORIGINAL_URL = "original_url"
+        private const val EXTRA_FORMAT_ID = "format_id"
         private const val EXTRA_TITLE = "title"
         private const val EXTRA_FORMAT = "format"
-        private const val EXTRA_HEADERS = "headers"
+        private const val EXTRA_ESTIMATED_SIZE = "estimated_size"
+        private const val EXTRA_HAS_AUDIO = "has_audio"
 
-        fun start(context: Context, url: String, title: String, format: String, headers: Map<String, String> = emptyMap()) {
+        fun start(
+            context: Context,
+            originalUrl: String,
+            formatId: String,
+            title: String,
+            format: String,
+            estimatedSize: Long = 0,
+            hasAudio: Boolean = true,
+        ) {
             val intent = Intent(context, DownloadService::class.java).apply {
-                putExtra(EXTRA_URL, url)
+                putExtra(EXTRA_ORIGINAL_URL, originalUrl)
+                putExtra(EXTRA_FORMAT_ID, formatId)
                 putExtra(EXTRA_TITLE, title)
                 putExtra(EXTRA_FORMAT, format)
-                putExtra(EXTRA_HEADERS, HashMap(headers))
+                putExtra(EXTRA_ESTIMATED_SIZE, estimatedSize)
+                putExtra(EXTRA_HAS_AUDIO, hasAudio)
             }
             ContextCompat.startForegroundService(context, intent)
         }

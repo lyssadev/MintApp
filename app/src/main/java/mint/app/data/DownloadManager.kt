@@ -4,8 +4,11 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
+enum class DownloadPhase { PREPARING, DOWNLOADING }
+
 data class DownloadUiState(
     val isDownloading: Boolean = false,
+    val phase: DownloadPhase = DownloadPhase.PREPARING,
     val progress: Int = 0,
     val title: String = "",
     val fileName: String = "",
@@ -26,6 +29,15 @@ object DownloadManager {
         _state.value = DownloadUiState()
     }
 
+    internal fun onPreparing(title: String) {
+        _state.value = DownloadUiState(
+            isDownloading = true,
+            phase = DownloadPhase.PREPARING,
+            progress = 0,
+            title = title,
+        )
+    }
+
     internal fun onProgress(
         percent: Int,
         title: String,
@@ -35,6 +47,7 @@ object DownloadManager {
     ) {
         _state.value = _state.value.copy(
             isDownloading = true,
+            phase = DownloadPhase.DOWNLOADING,
             progress = percent,
             title = title,
             isComplete = false,

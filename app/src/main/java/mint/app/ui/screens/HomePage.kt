@@ -69,6 +69,7 @@ import io.github.lyxnx.compose.ui.tablericons.outline.Download
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import mint.app.data.DownloadManager
+import mint.app.data.DownloadPhase
 import mint.app.data.DownloadService
 import mint.app.data.StreamInfo
 import mint.app.data.StreamOption
@@ -145,7 +146,15 @@ fun HomePage(modifier: Modifier = Modifier) {
         val info = (state as? ResolveState.Success)?.info
         if (info != null) {
             DownloadManager.reset()
-            DownloadService.start(context, option.url, info.title, option.format, option.httpHeaders)
+            DownloadService.start(
+                context,
+                info.originalUrl,
+                option.formatId,
+                info.title,
+                option.format,
+                option.estimatedSizeBytes,
+                option.hasAudio,
+            )
         }
     }
 
@@ -327,7 +336,11 @@ private fun DownloadProgressCard() {
                     modifier = Modifier.size(18.dp),
                 )
                 Text(
-                    text = "Downloading ${downloadState.progress}%",
+                    text = if (downloadState.phase == DownloadPhase.PREPARING) {
+                        "Preparing download..."
+                    } else {
+                        "Downloading ${downloadState.progress}%"
+                    },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
@@ -338,10 +351,16 @@ private fun DownloadProgressCard() {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            LinearProgressIndicator(
-                progress = { smoothProgress },
-                modifier = Modifier.fillMaxWidth(),
-            )
+            if (downloadState.phase == DownloadPhase.PREPARING) {
+                LinearProgressIndicator(
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            } else {
+                LinearProgressIndicator(
+                    progress = { smoothProgress },
+                    modifier = Modifier.fillMaxWidth(),
+                )
+            }
             if (downloadState.totalBytes > 0) {
                 Text(
                     text = "${formatBytes(downloadState.downloadedBytes)} / ${formatBytes(downloadState.totalBytes)}",
