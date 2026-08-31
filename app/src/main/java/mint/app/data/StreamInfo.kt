@@ -16,4 +16,5 @@ data class StreamOption(
     val format: String,
     val url: String,
     val estimatedSizeBytes: Long = 0,
+    val throttled: Boolean = false,
 )

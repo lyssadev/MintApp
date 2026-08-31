@@ -167,16 +167,42 @@ private fun OptionChips(
                             MaterialTheme.colorScheme.onPrimaryContainer
                         },
                     )
-                    if (option.estimatedSizeBytes > 0) {
-                        Text(
-                            text = formatBytes(option.estimatedSizeBytes),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = if (downloading) {
-                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                            } else {
-                                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                            },
-                        )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    ) {
+                        if (option.throttled) {
+                            Text(
+                                text = "throttled",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (downloading) {
+                                    MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+                                } else {
+                                    MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
+                                },
+                            )
+                        } else {
+                            Text(
+                                text = "full speed",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (downloading) {
+                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                                } else {
+                                    MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                },
+                            )
+                        }
+                        if (option.estimatedSizeBytes > 0) {
+                            Text(
+                                text = "· ${formatBytes(option.estimatedSizeBytes)}",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = if (downloading) {
+                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                } else {
+                                    MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                                },
+                            )
+                        }
                     }
                 }
             }

@@ -9,6 +9,7 @@ import android.os.IBinder
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
+import android.util.Log
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -17,6 +18,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import okhttp3.OkHttpClient
 import okhttp3.Request
+import java.io.BufferedOutputStream
 import java.io.IOException
 import java.io.InputStream
 import java.io.OutputStream
@@ -57,9 +59,12 @@ class DownloadService : Service() {
     private suspend fun download(url: String, title: String, format: String) {
         val fileName = buildFileName(title, format)
         val mime = mimeFor(format)
+        val tag = "MintDownload"
 
         val target = FileSaver.openForWrite(this, fileName, mime)
+        Log.d(tag, "target: ${target.displayPath} | uri: ${target.uri} | SDK>=29: ${Build.VERSION.SDK_INT >= 29}")
         try {
+            val t0 = System.nanoTime()
             val response = client.newCall(Request.Builder().url(url).build()).execute()
             if (!response.isSuccessful) {
                 throw IOException("HTTP ${response.code}")
@@ -67,18 +72,35 @@ class DownloadService : Service() {
             response.use { resp ->
                 val body = resp.body ?: throw IOException("Empty response body")
                 val total = body.contentLength()
+                val finalUrl = resp.request.url.toString()
+                Log.d(tag, "HTTP ${resp.code} | Content-Length: $total | final url: $finalUrl")
                 val input: InputStream = body.byteStream()
-                val output: OutputStream = target.outputStream
+                val output: OutputStream = BufferedOutputStream(target.outputStream, 64 * 1024)
                 val buffer = downloadBuffer
                 var downloaded = 0L
                 var lastNotify = 0L
+                var readNs = 0L
+                var writeNs = 0L
+                var firstByte = false
 
                 try {
                     var lastBytes = 0L
+                    var lastLog = 0L
+                    var lastReadNs = 0L
+                    var lastWriteNs = 0L
                     while (true) {
+                        val tRead = System.nanoTime()
                         val read = input.read(buffer)
+                        val dRead = System.nanoTime() - tRead
+                        readNs += dRead
                         if (read < 0) break
+                        if (!firstByte) {
+                            firstByte = true
+                            Log.d(tag, "TTFB (first byte): ${(System.nanoTime() - t0) / 1_000_000}ms")
+                        }
+                        val tWrite = System.nanoTime()
                         output.write(buffer, 0, read)
+                        writeNs += System.nanoTime() - tWrite
                         downloaded += read
                         val percent = if (total > 0) {
                             ((downloaded * 100) / total).toInt()
@@ -95,11 +117,26 @@ class DownloadService : Service() {
                             DownloadManager.onProgress(percent, title, downloaded, total, speed)
                             NotificationHelper.updateProgress(this, percent, title)
                         }
+                        if (now - lastLog >= 500) {
+                            val readRatio = readNs - lastReadNs
+                            val writeRatio = writeNs - lastWriteNs
+                            val sum = readRatio + writeRatio
+                            if (sum > 0) {
+                                Log.d(tag, "progress: $downloaded/$total bytes | read ${readRatio * 100 / sum}% | write ${writeRatio * 100 / sum}%")
+                            }
+                            lastLog = now
+                            lastReadNs = readNs
+                            lastWriteNs = writeNs
+                        }
                     }
                 } finally {
                     output.flush()
                     output.close()
                 }
+                val totalNs = System.nanoTime() - t0
+                Log.d(tag, "DONE: ${downloaded}B in ${totalNs / 1_000_000}ms | " +
+                    "read ${readNs / 1_000_000}ms | write ${writeNs / 1_000_000}ms | " +
+                    "avg read bytes: ${if (downloaded > 0) downloaded / (readNs / 1_000_000 + 1) else 0} B/ms")
             }
         } catch (e: Exception) {
             target.uri?.let { uri ->

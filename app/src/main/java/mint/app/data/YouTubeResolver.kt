@@ -1,87 +1,121 @@
 package mint.app.data
 
+import android.content.Context
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import org.schabi.newpipe.extractor.NewPipe
-import org.schabi.newpipe.extractor.services.youtube.YoutubeService
-import org.schabi.newpipe.extractor.stream.StreamType
-import java.util.concurrent.atomic.AtomicBoolean
+import com.yausername.youtubedl_android.YoutubeDL
+import com.yausername.youtubedl_android.YoutubeDLException
+import com.yausername.youtubedl_android.mapper.VideoFormat
 
 object YouTubeResolver {
 
-    private val initialized = AtomicBoolean(false)
+    private var initialized = false
+    private var updateLaunched = false
 
-    fun init() {
-        if (initialized.compareAndSet(false, true)) {
-            NewPipe.init(NewPipeDownloader())
-        }
+    fun init(context: Context) {
+        if (initialized) return
+        try {
+            YoutubeDL.getInstance().init(context.applicationContext)
+            initialized = true
+            launchYtdlpUpdate(context.applicationContext)
+        } catch (_: Exception) { }
+    }
+
+    private fun launchYtdlpUpdate(context: Context) {
+        if (updateLaunched) return
+        updateLaunched = true
+        Thread {
+            try {
+                YoutubeDL.getInstance().updateYoutubeDL(context, YoutubeDL.UpdateChannel.STABLE)
+            } catch (_: Exception) { }
+        }.start()
     }
 
     suspend fun resolve(url: String): StreamInfo = withContext(Dispatchers.IO) {
-        val service = NewPipe.getServiceByUrl(url) as? YoutubeService
-            ?: throw IllegalArgumentException("Only YouTube links are supported")
-        val extractor = service.getStreamExtractor(url)
-        extractor.fetchPage()
+        try {
+            val info = YoutubeDL.getInstance().getInfo(url)
+            val formats = info.formats ?: emptyList()
 
-        val streamType = extractor.streamType
-        val videoStreams = extractor.videoStreams
-        val videoOnlyStreams = extractor.videoOnlyStreams
-        val audioStreams = extractor.audioStreams
+            val videoFormats = formats.filter { f ->
+                val vc = f.vcodec ?: "none"
+                vc != "none" && (f.width ?: 0) > 0
+            }
+            val audioFormats = formats.filter { f ->
+                val ac = f.acodec ?: "none"
+                val vc = f.vcodec ?: "none"
+                ac != "none" && vc == "none"
+            }
 
-        val isMusicOnly = streamType == StreamType.AUDIO_STREAM ||
-            streamType == StreamType.AUDIO_LIVE_STREAM ||
-            streamType == StreamType.POST_LIVE_AUDIO_STREAM ||
-            (videoStreams.isEmpty() && videoOnlyStreams.isEmpty())
+            val isMusicOnly = videoFormats.isEmpty()
 
-        val durationSeconds = extractor.length
+            val videoOptions = videoFormats
+                .sortedWith(
+                    compareByDescending<VideoFormat> { it.height ?: 0 }
+                        .thenByDescending { it.tbr }
+                )
+                .distinctBy { it.height?.let { it / 144 * 144 } ?: 0 }
+                .map { format ->
+                    val label = buildVideoLabel(format)
+                    StreamOption(
+                        label = label,
+                        format = format.ext ?: "mp4",
+                        url = format.url ?: "",
+                        estimatedSizeBytes = format.fileSize
+                            ?: (format.fileSizeApproximate ?: 0L),
+                        throttled = false,
+                    )
+                }
 
-        val videoOptions = (videoStreams + videoOnlyStreams)
-            .sortedWith(
-                compareByDescending<org.schabi.newpipe.extractor.stream.VideoStream> { it.height }
-                    .thenByDescending { it.isVideoOnly }
-                    .thenBy { formatRank(it.format) },
+            val audioOptions = audioFormats
+                .sortedByDescending { it.tbr }
+                .map { format ->
+                    val label = buildAudioLabel(format)
+                    StreamOption(
+                        label = label,
+                        format = format.ext ?: "m4a",
+                        url = format.url ?: "",
+                        estimatedSizeBytes = format.fileSize
+                            ?: (format.fileSizeApproximate ?: 0L),
+                        throttled = false,
+                    )
+                }
+                .distinctBy { it.label }
+                .take(4)
+
+            StreamInfo(
+                title = info.title ?: "Unknown",
+                uploader = info.uploader ?: "Unknown",
+                thumbnailUrl = info.thumbnail,
+                durationText = formatDuration((info.duration ?: 0).toLong()),
+                isMusicOnly = isMusicOnly,
+                streamType = if (isMusicOnly) "AUDIO" else "VIDEO",
+                videoOptions = videoOptions,
+                audioOptions = audioOptions,
             )
-            .distinctBy { it.height }
-            .map { stream ->
-                val format = stream.formatLabel()
-                StreamOption(
-                    label = "${stream.resolution ?: "unknown"} · $format",
-                    format = format,
-                    url = stream.url ?: "",
-                    estimatedSizeBytes = estimateSize(stream.bitrate, durationSeconds),
-                )
-            }
-
-        val audioOptions = audioStreams
-            .map { stream ->
-                val format = stream.formatLabel()
-                val bitrate = if (stream.averageBitrate > 0) stream.averageBitrate else stream.bitrate
-                StreamOption(
-                    label = "${stream.bitrateLabel()} · $format",
-                    format = format,
-                    url = stream.url ?: "",
-                    estimatedSizeBytes = estimateSize(bitrate, durationSeconds),
-                )
-            }
-            .distinctBy { it.label }
-            .sortedWith(compareByDescending<StreamOption> { it.bitrateKbps() })
-            .take(4)
-
-        StreamInfo(
-            title = extractor.name,
-            uploader = extractor.uploaderName,
-            thumbnailUrl = extractor.thumbnails.firstOrNull()?.url,
-            durationText = formatDuration(durationSeconds),
-            isMusicOnly = isMusicOnly,
-            streamType = streamType.name,
-            videoOptions = videoOptions,
-            audioOptions = audioOptions,
-        )
+        } catch (e: YoutubeDLException) {
+            throw Exception("yt-dlp error: ${e.message}", e)
+        } catch (e: InterruptedException) {
+            throw Exception("Request cancelled", e)
+        }
     }
 
-    private fun estimateSize(bitrateBps: Int, durationSeconds: Long): Long {
-        if (bitrateBps <= 0 || durationSeconds <= 0) return 0
-        return (bitrateBps.toLong() * durationSeconds) / 8
+    private fun buildVideoLabel(format: VideoFormat): String {
+        val label = format.formatNote ?: format.resolutionString()
+        val ext = format.ext ?: "mp4"
+        return "$label · $ext"
+    }
+
+    private fun buildAudioLabel(format: VideoFormat): String {
+        val ext = format.ext ?: "m4a"
+        val bitrate = format.tbr
+        val rate = if (bitrate > 0) "${bitrate}kbps" else "audio"
+        return "$rate · $ext"
+    }
+
+    private fun VideoFormat.resolutionString(): String {
+        val w = width ?: 0
+        val h = height ?: 0
+        return if (h > 0) "${h}p" else "unknown"
     }
 
     private fun formatDuration(seconds: Long): String {
@@ -89,50 +123,6 @@ object YouTubeResolver {
         val h = seconds / 3600
         val m = (seconds % 3600) / 60
         val s = seconds % 60
-        return if (h > 0) {
-            "%d:%02d:%02d".format(h, m, s)
-        } else {
-            "%d:%02d".format(m, s)
-        }
-    }
-
-    private fun formatRank(format: org.schabi.newpipe.extractor.MediaFormat?): Int {
-        val name = format?.name ?: return 99
-        return when (name) {
-            "MPEG_4" -> 0
-            "v3GPP" -> 1
-            "WEBM" -> 2
-            else -> 3
-        }
-    }
-
-    private fun org.schabi.newpipe.extractor.stream.VideoStream.formatLabel(): String =
-        when (format?.name) {
-            "MPEG_4" -> "mp4"
-            "v3GPP" -> "3gp"
-            "WEBM" -> "webm"
-            else -> format?.suffix ?: "unknown"
-        }
-
-    private fun org.schabi.newpipe.extractor.stream.AudioStream.formatLabel(): String =
-        when (format?.name) {
-            "M4A" -> "m4a"
-            "MP3" -> "mp3"
-            "OPUS" -> "opus"
-            "WEBMA", "WEBMA_OPUS" -> "webm"
-            "FLAC" -> "flac"
-            else -> format?.suffix ?: "unknown"
-        }
-
-    private fun org.schabi.newpipe.extractor.stream.AudioStream.bitrateLabel(): String {
-        val itagBitrate = itagItem?.bitrate ?: 0
-        val streamBitrate = if (averageBitrate > 0) averageBitrate else bitrate
-        val bitrate = if (itagBitrate > 0) itagBitrate else streamBitrate
-        return if (bitrate > 0) "${bitrate / 1000}kbps" else "audio"
-    }
-
-    private fun StreamOption.bitrateKbps(): Int {
-        val match = Regex("(\\d+)kbps").find(label)
-        return match?.groupValues?.get(1)?.toIntOrNull() ?: 0
+        return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
     }
 }

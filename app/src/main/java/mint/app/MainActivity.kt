@@ -14,7 +14,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ThemeController.init(this)
-        YouTubeResolver.init()
+        YouTubeResolver.init(this)
         applyThemeAwareEdgeToEdge()
         setContent {
             LaunchedEffect(
