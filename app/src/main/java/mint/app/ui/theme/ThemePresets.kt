@@ -264,3 +264,19 @@ object ThemePresets {
         return if (dark) preset.dark else (preset.light ?: preset.dark)
     }
 }
+
+private val AmoledBlack = Color(0xFF000000)
+private val AmoledPanel = Color(0xFF0A0A0A)
+private val AmoledPanelHigh = Color(0xFF161616)
+private val AmoledPanelHighest = Color(0xFF1C1C1C)
+
+fun ColorScheme.amoledScheme(): ColorScheme = copy(
+    background = AmoledBlack,
+    surface = AmoledBlack,
+    surfaceContainerLowest = AmoledBlack,
+    surfaceContainerLow = AmoledPanel,
+    surfaceContainer = AmoledPanel,
+    surfaceContainerHigh = AmoledPanelHigh,
+    surfaceContainerHighest = AmoledPanelHighest,
+    surfaceVariant = AmoledPanelHigh,
+)

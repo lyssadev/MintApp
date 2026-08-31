@@ -19,6 +19,7 @@ class MainActivity : ComponentActivity() {
                 ThemeController.mode,
                 ThemeController.presetId,
                 ThemeController.dynamicColor,
+                ThemeController.amoled,
             ) {
                 applyThemeAwareEdgeToEdge()
             }

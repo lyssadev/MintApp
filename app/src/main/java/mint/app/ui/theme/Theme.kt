@@ -22,12 +22,18 @@ fun MintTheme(
 
     val colorScheme: ColorScheme = if (ThemeController.dynamicColor) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            val dynamic = if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+            if (dark && ThemeController.amoled) dynamic.amoledScheme() else dynamic
         } else {
             ThemePresets.resolve(ThemePresets.DEFAULT_ID, dark).toColorScheme()
         }
     } else {
-        ThemePresets.resolve(ThemeController.presetId, dark).toColorScheme()
+        val palette = ThemePresets.resolve(ThemeController.presetId, dark)
+        if (dark && ThemeController.amoled) {
+            palette.toColorScheme().amoledScheme()
+        } else {
+            palette.toColorScheme()
+        }
     }
 
     MaterialTheme(

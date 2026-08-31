@@ -52,6 +52,7 @@ import io.github.lyxnx.compose.ui.tablericons.TablerIcons
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandGithub
 import io.github.lyxnx.compose.ui.tablericons.outline.Check
 import io.github.lyxnx.compose.ui.tablericons.outline.ChevronRight
+import io.github.lyxnx.compose.ui.tablericons.outline.Moon
 import io.github.lyxnx.compose.ui.tablericons.outline.Palette
 import io.github.lyxnx.compose.ui.tablericons.outline.Refresh
 import io.github.lyxnx.compose.ui.tablericons.outline.Star
@@ -123,9 +124,15 @@ private fun AppearanceSection(onOpenThemePicker: () -> Unit) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .alpha(if (ThemeController.dynamicColor) 0.45f else 1f)
+                        .alpha(
+                            if (ThemeController.dynamicColor || ThemeController.amoled) {
+                                0.45f
+                            } else {
+                                1f
+                            }
+                        )
                         .then(
-                            if (ThemeController.dynamicColor) {
+                            if (ThemeController.dynamicColor || ThemeController.amoled) {
                                 Modifier
                             } else {
                                 Modifier.clickable(onClick = onOpenThemePicker)
@@ -150,10 +157,10 @@ private fun AppearanceSection(onOpenThemePicker: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            text = if (ThemeController.dynamicColor) {
-                                "Managed by Material You"
-                            } else {
-                                "${currentPreset.family} · ${currentPreset.name}"
+                            text = when {
+                                ThemeController.dynamicColor -> "Managed by Material You"
+                                ThemeController.amoled -> "Disable AMOLED to change theme"
+                                else -> "${currentPreset.family} · ${currentPreset.name}"
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -173,11 +180,13 @@ private fun AppearanceSection(onOpenThemePicker: () -> Unit) {
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
-                    ThemeModeSegmented(enabled = currentPreset.supportsBothModes)
+                    ThemeModeSegmented(enabled = currentPreset.supportsBothModes && !ThemeController.amoled)
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .alpha(if (ThemeController.amoled) 0.45f else 1f),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -197,7 +206,9 @@ private fun AppearanceSection(onOpenThemePicker: () -> Unit) {
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            text = if (dynamicSupported) {
+                            text = if (ThemeController.amoled) {
+                                "Disable AMOLED to use Material You"
+                            } else if (dynamicSupported) {
                                 "Colors from your wallpaper"
                             } else {
                                 "Requires Android 12 or newer"
@@ -209,7 +220,45 @@ private fun AppearanceSection(onOpenThemePicker: () -> Unit) {
                     Switch(
                         checked = ThemeController.dynamicColor && dynamicSupported,
                         onCheckedChange = { checked -> ThemeController.updateDynamicColor(checked) },
-                        enabled = dynamicSupported,
+                        enabled = dynamicSupported && !ThemeController.amoled,
+                    )
+                }
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                val effectiveDark = ThemePresets
+                    .resolve(ThemeController.presetId, ThemeController.isDarkMode())
+                    .isDark
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .alpha(if (effectiveDark) 1f else 0.45f),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = TablerIcons.Outline.Moon,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Column(
+                        modifier = Modifier.weight(1f),
+                        verticalArrangement = Arrangement.spacedBy(2.dp),
+                    ) {
+                        Text(
+                            text = "AMOLED",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = "Pure black background in dark mode",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    Switch(
+                        checked = ThemeController.amoled && effectiveDark,
+                        onCheckedChange = { checked -> ThemeController.updateAmoled(checked) },
+                        enabled = effectiveDark,
                     )
                 }
             }
