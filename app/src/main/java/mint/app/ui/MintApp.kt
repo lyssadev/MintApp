@@ -1,5 +1,8 @@
 package mint.app.ui
 
+import androidx.compose.animation.Crossfade
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
@@ -24,9 +27,15 @@ fun MintApp(modifier: Modifier = Modifier) {
         color = MaterialTheme.colorScheme.background,
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            when (currentScreen) {
-                Screen.Home -> HomePage(modifier = Modifier.fillMaxSize())
-                Screen.Settings -> SettingsPage(modifier = Modifier.fillMaxSize())
+            Crossfade(
+                targetState = currentScreen,
+                animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+                label = "screenSwitch",
+            ) { screen ->
+                when (screen) {
+                    Screen.Home -> HomePage(modifier = Modifier.fillMaxSize())
+                    Screen.Settings -> SettingsPage(modifier = Modifier.fillMaxSize())
+                }
             }
             FloatingBottomBar(
                 selectedScreen = currentScreen,
