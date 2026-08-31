@@ -82,6 +82,20 @@ object NotificationHelper {
         nm.notify(NOTIFICATION_ID, buildDownloading(context, title, progress))
     }
 
+    fun notifyProcessing(context: Context, title: String) {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification_download_animated)
+            .setContentTitle(title)
+            .setContentText("Processing...")
+            .setProgress(100, 100, true)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setContentIntent(contentIntent(context))
+            .build()
+        nm.notify(NOTIFICATION_ID, notification)
+    }
+
     fun notifyComplete(context: Context, title: String, fileName: String, fileUri: Uri?, mime: String) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(NOTIFICATION_ID, buildComplete(context, title, fileName, fileUri, mime))

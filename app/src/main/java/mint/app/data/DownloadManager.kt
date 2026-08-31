@@ -4,7 +4,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-enum class DownloadPhase { PREPARING, DOWNLOADING }
+enum class DownloadPhase { PREPARING, DOWNLOADING, PROCESSING }
 
 data class DownloadUiState(
     val isDownloading: Boolean = false,
@@ -55,6 +55,18 @@ object DownloadManager {
             downloadedBytes = downloadedBytes,
             totalBytes = totalBytes,
             speedBytesPerSec = speed,
+        )
+    }
+
+    internal fun onProcessing(title: String) {
+        _state.value = _state.value.copy(
+            isDownloading = true,
+            phase = DownloadPhase.PROCESSING,
+            progress = 100,
+            title = title,
+            isComplete = false,
+            error = null,
+            speedBytesPerSec = 0,
         )
     }
 

@@ -11,7 +11,6 @@ import com.yausername.youtubedl_android.mapper.VideoFormat
 object YouTubeResolver {
 
     private var initialized = false
-    private var updateDone = false
     private var appContext: Context? = null
 
     fun init(context: Context) {
@@ -21,17 +20,26 @@ object YouTubeResolver {
             YoutubeDL.getInstance().init(appContext!!)
             FFmpeg.getInstance().init(appContext!!)
             initialized = true
+            maybeUpdateInBackground()
         } catch (_: Exception) { }
     }
 
+    private fun maybeUpdateInBackground() {
+        Thread {
+            try {
+                val ctx = appContext ?: return@Thread
+                val prefs = ctx.getSharedPreferences("mint_youtubedl", Context.MODE_PRIVATE)
+                val last = prefs.getLong("last_update", 0L)
+                val weekMs = 7L * 24 * 60 * 60 * 1000
+                if (System.currentTimeMillis() - last >= weekMs) {
+                    YoutubeDL.getInstance().updateYoutubeDL(ctx, YoutubeDL.UpdateChannel.STABLE)
+                    prefs.edit().putLong("last_update", System.currentTimeMillis()).apply()
+                }
+            } catch (_: Exception) { }
+        }.start()
+    }
+
     suspend fun resolve(url: String): StreamInfo = withContext(Dispatchers.IO) {
-        if (!updateDone) {
-            val ctx = appContext
-            if (ctx != null) {
-                runCatching { YoutubeDL.getInstance().updateYoutubeDL(ctx, YoutubeDL.UpdateChannel.STABLE) }
-            }
-            updateDone = true
-        }
         try {
             val info = YoutubeDL.getInstance().getInfo(url)
             val formats = info.formats ?: emptyList()

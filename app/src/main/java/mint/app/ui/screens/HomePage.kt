@@ -336,10 +336,10 @@ private fun DownloadProgressCard() {
                     modifier = Modifier.size(18.dp),
                 )
                 Text(
-                    text = if (downloadState.phase == DownloadPhase.PREPARING) {
-                        "Preparing download..."
-                    } else {
-                        "Downloading ${downloadState.progress}%"
+                    text = when (downloadState.phase) {
+                        DownloadPhase.PREPARING -> "Preparing download..."
+                        DownloadPhase.PROCESSING -> "Processing..."
+                        DownloadPhase.DOWNLOADING -> "Downloading ${downloadState.progress}%"
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
@@ -351,7 +351,7 @@ private fun DownloadProgressCard() {
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            if (downloadState.phase == DownloadPhase.PREPARING) {
+            if (downloadState.phase != DownloadPhase.DOWNLOADING) {
                 LinearProgressIndicator(
                     modifier = Modifier.fillMaxWidth(),
                 )

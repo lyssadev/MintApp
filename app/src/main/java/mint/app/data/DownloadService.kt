@@ -88,16 +88,35 @@ class DownloadService : Service() {
 
             currentProcessId = "mint_download_${System.currentTimeMillis()}"
 
-            val callback: (Float, Long, String?) -> Unit = { progress, eta, _ ->
-                val percent = progress.toInt().coerceIn(0, 100)
-                val downloaded = if (estimatedSize > 0) {
-                    (progress / 100.0 * estimatedSize).toLong()
+            var lastBytes = 0L
+            var lastTime = 0L
+            val callback: (Float, Long, String?) -> Unit = { progress, eta, line ->
+                val isProcessing = line != null && (line.contains("Merger", true) ||
+                    line.contains("ffmpeg", true) ||
+                    line.contains("Converting", true) ||
+                    line.contains("Deleting", true) ||
+                    line.contains("Moving", true) ||
+                    line.contains("Fixup", true) ||
+                    line.contains("Embedding", true))
+                if (isProcessing) {
+                    DownloadManager.onProcessing(title)
+                    NotificationHelper.notifyProcessing(this@DownloadService, title)
                 } else {
-                    0L
+                    val p = progress.toFloat().coerceIn(0f, 100f)
+                    val percent = p.toInt()
+                    val downloaded = (p / 100.0 * estimatedSize).toLong().coerceAtLeast(0)
+                    val now = System.currentTimeMillis()
+                    val speed = if (lastTime > 0 && now > lastTime && downloaded >= lastBytes) {
+                        ((downloaded - lastBytes) * 1000 / (now - lastTime))
+                    } else {
+                        0L
+                    }
+                    lastBytes = downloaded
+                    lastTime = now
+                    Log.d(TAG, "progress: $percent% | eta: ${eta}s")
+                    DownloadManager.onProgress(percent, title, downloaded, estimatedSize, speed)
+                    NotificationHelper.updateProgress(this@DownloadService, percent, title)
                 }
-                Log.d(TAG, "progress: $percent% | eta: ${eta}s")
-                DownloadManager.onProgress(percent, title, downloaded, estimatedSize, 0)
-                NotificationHelper.updateProgress(this@DownloadService, percent, title)
             }
 
             YoutubeDL.getInstance().execute(request, currentProcessId, callback)
