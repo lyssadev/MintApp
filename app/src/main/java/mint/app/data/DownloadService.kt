@@ -86,7 +86,7 @@ class DownloadService : Service() {
             request.addOption("--no-mtime")
             request.addOption("--no-playlist")
             request.addOption("--throttled-rate", "100K")
-            request.addOption("--concurrent-fragments", "8")
+            request.addOption("--hls-prefer-ffmpeg")
             request.addOption("--retries", "10")
             request.addOption("--fragment-retries", "10")
             request.addOption("--verbose")
