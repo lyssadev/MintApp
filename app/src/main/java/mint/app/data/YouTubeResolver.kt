@@ -10,28 +10,26 @@ import com.yausername.youtubedl_android.mapper.VideoFormat
 object YouTubeResolver {
 
     private var initialized = false
-    private var updateLaunched = false
+    private var updateDone = false
+    private var appContext: Context? = null
 
     fun init(context: Context) {
         if (initialized) return
         try {
-            YoutubeDL.getInstance().init(context.applicationContext)
+            appContext = context.applicationContext
+            YoutubeDL.getInstance().init(appContext!!)
             initialized = true
-            launchYtdlpUpdate(context.applicationContext)
         } catch (_: Exception) { }
     }
 
-    private fun launchYtdlpUpdate(context: Context) {
-        if (updateLaunched) return
-        updateLaunched = true
-        Thread {
-            try {
-                YoutubeDL.getInstance().updateYoutubeDL(context, YoutubeDL.UpdateChannel.STABLE)
-            } catch (_: Exception) { }
-        }.start()
-    }
-
     suspend fun resolve(url: String): StreamInfo = withContext(Dispatchers.IO) {
+        if (!updateDone) {
+            val ctx = appContext
+            if (ctx != null) {
+                runCatching { YoutubeDL.getInstance().updateYoutubeDL(ctx, YoutubeDL.UpdateChannel.STABLE) }
+            }
+            updateDone = true
+        }
         try {
             val info = YoutubeDL.getInstance().getInfo(url)
             val formats = info.formats ?: emptyList()
@@ -63,6 +61,7 @@ object YouTubeResolver {
                         estimatedSizeBytes = format.fileSize
                             ?: (format.fileSizeApproximate ?: 0L),
                         throttled = false,
+                        httpHeaders = format.httpHeaders ?: emptyMap(),
                     )
                 }
 
@@ -77,6 +76,7 @@ object YouTubeResolver {
                         estimatedSizeBytes = format.fileSize
                             ?: (format.fileSizeApproximate ?: 0L),
                         throttled = false,
+                        httpHeaders = format.httpHeaders ?: emptyMap(),
                     )
                 }
                 .distinctBy { it.label }

@@ -17,4 +17,5 @@ data class StreamOption(
     val url: String,
     val estimatedSizeBytes: Long = 0,
     val throttled: Boolean = false,
+    val httpHeaders: Map<String, String> = emptyMap(),
 )

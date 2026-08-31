@@ -38,6 +38,8 @@ class DownloadService : Service() {
         val url = intent?.getStringExtra(EXTRA_URL) ?: run { stopSelf(); return START_NOT_STICKY }
         val title = intent.getStringExtra(EXTRA_TITLE) ?: "Download"
         val format = intent.getStringExtra(EXTRA_FORMAT) ?: "mp4"
+        @Suppress("UNCHECKED_CAST")
+        val headers = intent.getSerializableExtra(EXTRA_HEADERS) as? HashMap<String, String> ?: HashMap()
 
         NotificationHelper.createChannel(this)
         startForegroundCompat(NotificationHelper.buildDownloading(this, title, 0))
@@ -45,7 +47,7 @@ class DownloadService : Service() {
 
         scope.launch {
             try {
-                download(url, title, format)
+                download(url, title, format, headers)
             } catch (e: Exception) {
                 DownloadManager.onError(e.message ?: "Download failed")
             } finally {
@@ -56,7 +58,7 @@ class DownloadService : Service() {
         return START_NOT_STICKY
     }
 
-    private suspend fun download(url: String, title: String, format: String) {
+    private suspend fun download(url: String, title: String, format: String, headers: Map<String, String>) {
         val fileName = buildFileName(title, format)
         val mime = mimeFor(format)
         val tag = "MintDownload"
@@ -65,7 +67,9 @@ class DownloadService : Service() {
         Log.d(tag, "target: ${target.displayPath} | uri: ${target.uri} | SDK>=29: ${Build.VERSION.SDK_INT >= 29}")
         try {
             val t0 = System.nanoTime()
-            val response = client.newCall(Request.Builder().url(url).build()).execute()
+            val reqBuilder = Request.Builder().url(url)
+            headers.forEach { (key, value) -> reqBuilder.addHeader(key, value) }
+            val response = client.newCall(reqBuilder.build()).execute()
             if (!response.isSuccessful) {
                 throw IOException("HTTP ${response.code}")
             }
@@ -212,12 +216,14 @@ class DownloadService : Service() {
         private const val EXTRA_URL = "url"
         private const val EXTRA_TITLE = "title"
         private const val EXTRA_FORMAT = "format"
+        private const val EXTRA_HEADERS = "headers"
 
-        fun start(context: Context, url: String, title: String, format: String) {
+        fun start(context: Context, url: String, title: String, format: String, headers: Map<String, String> = emptyMap()) {
             val intent = Intent(context, DownloadService::class.java).apply {
                 putExtra(EXTRA_URL, url)
                 putExtra(EXTRA_TITLE, title)
                 putExtra(EXTRA_FORMAT, format)
+                putExtra(EXTRA_HEADERS, HashMap(headers))
             }
             ContextCompat.startForegroundService(context, intent)
         }

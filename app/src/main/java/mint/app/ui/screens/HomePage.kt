@@ -145,7 +145,7 @@ fun HomePage(modifier: Modifier = Modifier) {
         val info = (state as? ResolveState.Success)?.info
         if (info != null) {
             DownloadManager.reset()
-            DownloadService.start(context, option.url, info.title, option.format)
+            DownloadService.start(context, option.url, info.title, option.format, option.httpHeaders)
         }
     }
 
