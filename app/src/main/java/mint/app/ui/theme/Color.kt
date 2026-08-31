@@ -3,6 +3,7 @@ package mint.app.ui.theme
 import androidx.compose.ui.graphics.Color
 
 val medium_gray = Color(0xFF8A8A8A)
+val logo_green = Color(0xFF97C8B4)
 
 val md_theme_light_primary = Color(0xFF3E8E57)
 val md_theme_light_onPrimary = Color(0xFFFFFFFF)
