@@ -67,6 +67,9 @@ import io.github.lyxnx.compose.ui.tablericons.TablerIcons
 import io.github.lyxnx.compose.ui.tablericons.outline.Check
 import io.github.lyxnx.compose.ui.tablericons.outline.Clipboard
 import io.github.lyxnx.compose.ui.tablericons.outline.Download
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import mint.app.data.DownloadManager
@@ -89,6 +92,7 @@ private sealed interface ResolveState {
 private object HomeSession {
     var link by mutableStateOf("")
     var state by mutableStateOf<ResolveState>(ResolveState.Idle)
+    val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 }
 
 @Composable
@@ -97,7 +101,6 @@ fun HomePage(modifier: Modifier = Modifier) {
         MutableTransitionState(false).apply { targetState = true }
     }
 
-    val scope = rememberCoroutineScope()
     val context = LocalContext.current
     val downloadState by DownloadManager.state.collectAsState()
 
@@ -129,7 +132,7 @@ fun HomePage(modifier: Modifier = Modifier) {
         val trimmed = url.trim()
         if (trimmed.isNotEmpty()) {
             HomeSession.state = ResolveState.Loading
-            scope.launch {
+            HomeSession.scope.launch {
                 HomeSession.state = try {
                     ResolveState.Success(YouTubeResolver.resolve(trimmed))
                 } catch (e: Exception) {

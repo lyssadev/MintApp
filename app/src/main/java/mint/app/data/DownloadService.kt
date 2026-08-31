@@ -142,8 +142,9 @@ class DownloadService : Service() {
             val actualExt = actualFile.extension.ifBlank { format }
             val finalName = "$baseName.$actualExt"
             val finalMime = mimeFor(actualExt)
+            val isAudio = finalMime.startsWith("audio/")
 
-            val target = FileSaver.openForWrite(this@DownloadService, finalName, finalMime)
+            val target = FileSaver.openForWrite(this@DownloadService, finalName, finalMime, isAudio)
             try {
                 actualFile.inputStream().use { input ->
                     target.outputStream.use { output ->

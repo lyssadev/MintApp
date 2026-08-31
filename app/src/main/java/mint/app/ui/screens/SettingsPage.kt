@@ -469,6 +469,8 @@ private fun ThemeSwatch(color: Color) {
 private fun DownloadsSection() {
     val context = LocalContext.current
     var subfolder by remember { mutableStateOf(DownloadPreferences.subfolder(context)) }
+    var videoDir by remember { mutableStateOf(DownloadPreferences.videoDir(context)) }
+    var audioDir by remember { mutableStateOf(DownloadPreferences.audioDir(context)) }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
@@ -502,7 +504,7 @@ private fun DownloadsSection() {
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            text = "Subfolder inside /sdcard/Download/",
+                            text = "Base folder inside /sdcard/Download/",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -515,15 +517,55 @@ private fun DownloadsSection() {
                         DownloadPreferences.setSubfolder(context, new)
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text(text = "Mint") },
+                    placeholder = { Text(text = "MintApp") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                )
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+                Text(
+                    text = "Videos folder",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = videoDir,
+                    onValueChange = { new ->
+                        videoDir = new
+                        DownloadPreferences.setVideoDir(context, new)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text(text = "videos") },
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),
                 )
                 Text(
-                    text = if (subfolder.isBlank()) {
-                        "/sdcard/Download/"
-                    } else {
-                        "/sdcard/Download/${subfolder.trim('/')}/"
+                    text = "Audios folder",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = audioDir,
+                    onValueChange = { new ->
+                        audioDir = new
+                        DownloadPreferences.setAudioDir(context, new)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text(text = "audios") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                )
+                Text(
+                    text = buildString {
+                        val base = subfolder.trim('/')
+                        val vid = videoDir.trim('/')
+                        val aud = audioDir.trim('/')
+                        append("/sdcard/Download/")
+                        append(if (base.isBlank()) "MintApp" else base)
+                        append('/')
+                        append(if (vid.isBlank()) "videos" else vid)
+                        append(" · ")
+                        append(if (aud.isBlank()) "audios" else aud)
+                        append("/")
                     },
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,

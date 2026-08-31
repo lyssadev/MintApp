@@ -23,16 +23,23 @@ object FileSaver {
         context: Context,
         fileName: String,
         mimeType: String,
+        isAudio: Boolean,
     ): OutputTarget {
         val subfolder = DownloadPreferences.subfolder(context)
+        val typeDir = if (isAudio) DownloadPreferences.audioDir(context) else DownloadPreferences.videoDir(context)
+        val relativeSub = buildString {
+            append(subfolder)
+            if (typeDir.isNotBlank()) {
+                append('/')
+                append(typeDir)
+            }
+        }
 
         return if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             val relativePath = buildString {
                 append(Environment.DIRECTORY_DOWNLOADS)
-                if (subfolder.isNotBlank()) {
-                    append('/')
-                    append(subfolder)
-                }
+                append('/')
+                append(relativeSub)
             }
             val values = ContentValues().apply {
                 put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
@@ -48,18 +55,11 @@ object FileSaver {
             OutputTarget(
                 outputStream = stream,
                 uri = uri,
-                displayPath = buildString {
-                    append("/sdcard/Download/")
-                    if (subfolder.isNotBlank()) {
-                        append(subfolder)
-                        append('/')
-                    }
-                    append(fileName)
-                },
+                displayPath = "/sdcard/Download/$relativeSub/$fileName",
             )
         } else {
             val base = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
-            val dir = if (subfolder.isNotBlank()) File(base, subfolder) else base
+            val dir = File(File(base, subfolder), typeDir)
             dir.mkdirs()
             val file = File(dir, fileName)
             OutputTarget(
