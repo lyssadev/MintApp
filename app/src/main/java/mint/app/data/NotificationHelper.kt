@@ -86,4 +86,16 @@ object NotificationHelper {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.notify(NOTIFICATION_ID, buildComplete(context, title, fileName, fileUri, mime))
     }
+
+    fun notifyError(context: Context, title: String, error: String) {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(android.R.drawable.stat_sys_warning)
+            .setContentTitle(title)
+            .setContentText("Download failed — $error")
+            .setAutoCancel(true)
+            .setContentIntent(contentIntent(context))
+            .build()
+        nm.notify(NOTIFICATION_ID, notification)
+    }
 }

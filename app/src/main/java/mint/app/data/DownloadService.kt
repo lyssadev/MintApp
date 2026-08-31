@@ -50,7 +50,10 @@ class DownloadService : Service() {
             } catch (e: InterruptedException) {
                 Log.d(TAG, "download interrupted")
             } catch (e: Exception) {
-                DownloadManager.onError(e.message ?: "Download failed")
+                currentProcessId?.let { YoutubeDL.getInstance().destroyProcessById(it) }
+                scope.cancel()
+                NotificationHelper.notifyError(this@DownloadService, title, extractError(e.message))
+                DownloadManager.onError(extractError(e.message))
             } finally {
                 stopForeground(STOP_FOREGROUND_DETACH)
                 stopSelf()
@@ -67,19 +70,15 @@ class DownloadService : Service() {
         estimatedSize: Long,
         hasAudio: Boolean,
     ) = withContext(Dispatchers.IO) {
-        val fileName = buildFileName(title, format)
-        val mime = mimeFor(format)
-
+        val baseName = buildBaseName(title)
         val tempDir = File(cacheDir, "downloads")
         tempDir.mkdirs()
-        val tempFile = File(tempDir, fileName)
-        Log.d(TAG, "target: Download/$fileName -> ${tempFile.absolutePath}")
 
         try {
-            val formatSelector = if (!hasAudio) "$formatId+bestaudio" else formatId
+            val formatSelector = if (!hasAudio) "$formatId+bestaudio[ext=m4a]" else formatId
             val request = YoutubeDLRequest(originalUrl)
             request.addOption("-f", formatSelector)
-            request.addOption("-o", tempFile.absolutePath)
+            request.addOption("-o", File(tempDir, baseName).absolutePath)
             request.addOption("--no-mtime")
             request.addOption("--no-playlist")
             request.addOption("--throttled-rate", "100K")
@@ -101,31 +100,36 @@ class DownloadService : Service() {
                 NotificationHelper.updateProgress(this@DownloadService, percent, title)
             }
 
-            val t0 = System.nanoTime()
             YoutubeDL.getInstance().execute(request, currentProcessId, callback)
-            val totalMs = (System.nanoTime() - t0) / 1_000_000
-            Log.d(TAG, "DONE: ${tempFile.length()}B in ${totalMs}ms")
 
-            val target = FileSaver.openForWrite(this@DownloadService, fileName, mime)
-            Log.d(TAG, "copying -> ${target.displayPath} | uri: ${target.uri}")
-            tempFile.inputStream().use { input ->
+            val actualFile = tempDir.listFiles()
+                ?.filter { it.isFile && it.name.startsWith(baseName) && !it.name.endsWith(".part") }
+                ?.maxByOrNull { it.lastModified() }
+                ?: throw Exception("downloaded file not found")
+
+            val actualExt = actualFile.extension.ifBlank { format }
+            val finalName = "$baseName.$actualExt"
+            val finalMime = mimeFor(actualExt)
+
+            val target = FileSaver.openForWrite(this@DownloadService, finalName, finalMime)
+            actualFile.inputStream().use { input ->
                 target.outputStream.use { output ->
                     input.copyTo(output, 64 * 1024)
                 }
             }
-            tempFile.delete()
+            actualFile.delete()
 
-            DownloadManager.onComplete(fileName, target.displayPath)
+            DownloadManager.onComplete(finalName, target.displayPath)
             vibrate()
             NotificationHelper.notifyComplete(
                 this@DownloadService,
                 title,
-                fileName,
+                finalName,
                 target.uri,
-                mime,
+                finalMime,
             )
         } catch (e: Exception) {
-            if (tempFile.exists()) tempFile.delete()
+            tempDir.listFiles()?.filter { it.name.startsWith(baseName) }?.forEach { it.delete() }
             throw e
         }
     }
@@ -160,13 +164,30 @@ class DownloadService : Service() {
         super.onDestroy()
     }
 
-    private fun buildFileName(title: String, format: String): String {
-        val safe = title
+    private fun extractError(raw: String?): String {
+        if (raw.isNullOrBlank()) return "Download failed"
+        val lines = raw.lines()
+        val interesting = lines.filter { line ->
+            line.contains("ERROR", ignoreCase = true) ||
+                line.contains("Error", ignoreCase = true) ||
+                line.contains("Traceback", ignoreCase = true) ||
+                line.contains("ENOENT", ignoreCase = true) ||
+                line.contains("No such file", ignoreCase = true) ||
+                line.contains("ffmpeg", ignoreCase = true)
+        }
+        return if (interesting.isNotEmpty()) {
+            interesting.takeLast(6).joinToString("\n").trim()
+        } else {
+            lines.takeLast(3).joinToString("\n").trim()
+        }
+    }
+
+    private fun buildBaseName(title: String): String {
+        return title
             .replace(Regex("[\\\\/:*?\"<>|]"), "_")
             .trim()
             .take(80)
             .ifBlank { "download" }
-        return "$safe.$format"
     }
 
     private fun mimeFor(format: String): String = when (format.lowercase()) {
@@ -178,6 +199,7 @@ class DownloadService : Service() {
         "opus", "ogg" -> "audio/ogg"
         "flac" -> "audio/flac"
         "wav" -> "audio/wav"
+        "mkv" -> "video/x-matroska"
         else -> "application/octet-stream"
     }
 
