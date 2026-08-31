@@ -3,8 +3,6 @@ package mint.app.ui.components
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.ExperimentalLayoutApi
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -25,7 +23,6 @@ import coil3.compose.AsyncImage
 import mint.app.data.StreamInfo
 import mint.app.data.StreamOption
 
-@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun StreamInfoCard(
     info: StreamInfo,
@@ -138,8 +135,7 @@ private fun OptionChips(
     downloading: Boolean,
     onOptionClick: (StreamOption) -> Unit,
 ) {
-    FlowRow(
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         options.forEach { option ->
@@ -154,9 +150,10 @@ private fun OptionChips(
                     .clip(RoundedCornerShape(10.dp))
                     .clickable(enabled = !downloading) { onOptionClick(option) },
             ) {
-                Column(
+                Row(
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                    horizontalAlignment = Alignment.Start,
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
                     Text(
                         text = option.label,
@@ -167,42 +164,33 @@ private fun OptionChips(
                             MaterialTheme.colorScheme.onPrimaryContainer
                         },
                     )
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(4.dp),
-                    ) {
-                        if (option.throttled) {
-                            Text(
-                                text = "throttled",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (downloading) {
-                                    MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
-                                } else {
-                                    MaterialTheme.colorScheme.error.copy(alpha = 0.8f)
-                                },
-                            )
-                        } else {
-                            Text(
-                                text = "full speed",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (downloading) {
-                                    MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
-                                } else {
-                                    MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                                },
-                            )
-                        }
-                        if (option.estimatedSizeBytes > 0) {
-                            Text(
-                                text = "· ${formatBytes(option.estimatedSizeBytes)}",
-                                style = MaterialTheme.typography.labelSmall,
-                                color = if (downloading) {
-                                    MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
-                                } else {
-                                    MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                                },
-                            )
-                        }
+                    if (option.throttled) {
+                        Text(
+                            text = "throttled",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.error.copy(alpha = 0.8f),
+                        )
+                    } else {
+                        Text(
+                            text = "full speed",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (downloading) {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.8f)
+                            } else {
+                                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            },
+                        )
+                    }
+                    if (option.estimatedSizeBytes > 0) {
+                        Text(
+                            text = "· ${formatBytes(option.estimatedSizeBytes)}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (downloading) {
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            } else {
+                                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            },
+                        )
                     }
                 }
             }
