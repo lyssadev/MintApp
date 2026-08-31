@@ -36,6 +36,13 @@ android {
         }
     }
 
+    splits.abi {
+        isEnable = true
+        reset()
+        include("armeabi-v7a", "arm64-v8a")
+        isUniversalApk = true
+    }
+
     buildTypes {
         debug {
             signingConfig = signingConfigs.getByName("mint")
