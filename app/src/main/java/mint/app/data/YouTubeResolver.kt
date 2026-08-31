@@ -71,7 +71,6 @@ object YouTubeResolver {
                         formatId = format.formatId ?: "",
                         url = format.url ?: "",
                         estimatedSizeBytes = estimateSize(format, durationSec),
-                        throttled = false,
                         hasAudio = (format.acodec ?: "none") != "none",
                         httpHeaders = format.httpHeaders ?: emptyMap(),
                     )
@@ -87,7 +86,6 @@ object YouTubeResolver {
                         formatId = format.formatId ?: "",
                         url = format.url ?: "",
                         estimatedSizeBytes = estimateSize(format, durationSec),
-                        throttled = false,
                         hasAudio = true,
                         httpHeaders = format.httpHeaders ?: emptyMap(),
                     )

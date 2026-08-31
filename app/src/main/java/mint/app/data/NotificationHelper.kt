@@ -42,6 +42,14 @@ object NotificationHelper {
         )
     }
 
+    private fun cancelIntent(context: Context): PendingIntent {
+        val intent = Intent(context, CancelDownloadReceiver::class.java)
+        return PendingIntent.getBroadcast(
+            context, 2, intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
+
     private fun viewIntent(context: Context, uri: Uri, mime: String): PendingIntent? {
         val intent = Intent(Intent.ACTION_VIEW).apply {
             setDataAndType(uri, mime)
@@ -52,8 +60,29 @@ object NotificationHelper {
         ).takeIf { intent.resolveActivity(context.packageManager) != null }
     }
 
-    fun buildDownloading(context: Context, title: String, progress: Int): Notification {
-        return NotificationCompat.Builder(context, CHANNEL_ID)
+    private var cachedIconUrl: String? = null
+    private var cachedIcon: android.graphics.Bitmap? = null
+
+    private fun largeIcon(context: Context, url: String?): android.graphics.Bitmap? {
+        if (url.isNullOrBlank()) return null
+        if (url == cachedIconUrl) return cachedIcon
+        return try {
+            val connection = java.net.URL(url).openConnection() as java.net.HttpURLConnection
+            connection.connectTimeout = 5000
+            connection.readTimeout = 5000
+            val bitmap = connection.inputStream.use {
+                android.graphics.BitmapFactory.decodeStream(it)
+            }
+            cachedIconUrl = url
+            cachedIcon = bitmap
+            bitmap
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    fun buildDownloading(context: Context, title: String, progress: Int, thumbnailUrl: String? = null): Notification {
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_download_animated)
             .setContentTitle(title)
             .setContentText("$progress%")
@@ -61,7 +90,9 @@ object NotificationHelper {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(contentIntent(context))
-            .build()
+            .addAction(0, "Cancel", cancelIntent(context))
+        largeIcon(context, thumbnailUrl)?.let { builder.setLargeIcon(it) }
+        return builder.build()
     }
 
     fun buildComplete(context: Context, title: String, fileName: String, fileUri: Uri?, mime: String): Notification {
@@ -77,14 +108,19 @@ object NotificationHelper {
         return builder.build()
     }
 
-    fun updateProgress(context: Context, progress: Int, title: String) {
+    fun notifyComplete(context: Context, title: String, fileName: String, fileUri: Uri?, mime: String) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.notify(NOTIFICATION_ID, buildDownloading(context, title, progress))
+        nm.notify(NOTIFICATION_ID, buildComplete(context, title, fileName, fileUri, mime))
     }
 
-    fun notifyProcessing(context: Context, title: String) {
+    fun updateProgress(context: Context, progress: Int, title: String, thumbnailUrl: String? = null) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        val notification = NotificationCompat.Builder(context, CHANNEL_ID)
+        nm.notify(NOTIFICATION_ID, buildDownloading(context, title, progress, thumbnailUrl))
+    }
+
+    fun notifyProcessing(context: Context, title: String, thumbnailUrl: String? = null) {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_download_animated)
             .setContentTitle(title)
             .setContentText("Processing...")
@@ -92,13 +128,9 @@ object NotificationHelper {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(contentIntent(context))
-            .build()
-        nm.notify(NOTIFICATION_ID, notification)
-    }
-
-    fun notifyComplete(context: Context, title: String, fileName: String, fileUri: Uri?, mime: String) {
-        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.notify(NOTIFICATION_ID, buildComplete(context, title, fileName, fileUri, mime))
+            .addAction(0, "Cancel", cancelIntent(context))
+        largeIcon(context, thumbnailUrl)?.let { builder.setLargeIcon(it) }
+        nm.notify(NOTIFICATION_ID, builder.build())
     }
 
     fun notifyError(context: Context, title: String, error: String) {

@@ -21,7 +21,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -29,10 +31,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import io.github.lyxnx.compose.ui.tablericons.TablerIcons
 import io.github.lyxnx.compose.ui.tablericons.filled.Home as HomeFilled
 import io.github.lyxnx.compose.ui.tablericons.filled.Settings as SettingsFilled
+import io.github.lyxnx.compose.ui.tablericons.outline.Download as DownloadOutline
 import io.github.lyxnx.compose.ui.tablericons.outline.Home as HomeOutline
 import io.github.lyxnx.compose.ui.tablericons.outline.Settings as SettingsOutline
 import mint.app.ui.Screen
@@ -45,6 +50,7 @@ private data class BottomBarItem(
 
 private val bottomBarItems = listOf(
     BottomBarItem(Screen.Home, TablerIcons.Outline.HomeOutline, TablerIcons.Filled.HomeFilled),
+    BottomBarItem(Screen.Downloads, TablerIcons.Outline.DownloadOutline, TablerIcons.Outline.DownloadOutline),
     BottomBarItem(Screen.Settings, TablerIcons.Outline.SettingsOutline, TablerIcons.Filled.SettingsFilled),
 )
 
@@ -57,6 +63,9 @@ fun FloatingBottomBar(
     onScreenSelected: (Screen) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val activeCount = mint.app.data.DownloadManager.state.collectAsState().value.let {
+        if (it.isDownloading && !it.isComplete) 1 else 0
+    }
     val selectedIndex = bottomBarItems.indexOfFirst { it.screen == selectedScreen }
     val indicatorOffset by animateDpAsState(
         targetValue = ItemWidth * selectedIndex,
@@ -91,6 +100,7 @@ fun FloatingBottomBar(
                     FloatingBottomBarItem(
                         item = item,
                         selected = item.screen == selectedScreen,
+                        badgeCount = if (item.screen == Screen.Downloads) activeCount else 0,
                         onClick = { onScreenSelected(item.screen) },
                     )
                 }
@@ -103,6 +113,7 @@ fun FloatingBottomBar(
 private fun FloatingBottomBarItem(
     item: BottomBarItem,
     selected: Boolean,
+    badgeCount: Int,
     onClick: () -> Unit,
 ) {
     val iconScale by animateFloatAsState(
@@ -149,6 +160,27 @@ private fun FloatingBottomBarItem(
                     .size(22.dp)
                     .scale(iconScale),
             )
+        }
+        if (badgeCount > 0) {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(top = 3.dp, end = 5.dp)
+                    .size(15.dp)
+                    .background(
+                        color = MaterialTheme.colorScheme.error,
+                        shape = CircleShape,
+                    ),
+                contentAlignment = Alignment.Center,
+            ) {
+                Text(
+                    text = badgeCount.toString(),
+                    color = MaterialTheme.colorScheme.onError,
+                    fontSize = 9.sp,
+                    fontWeight = FontWeight.Bold,
+                    lineHeight = 9.sp,
+                )
+            }
         }
     }
 }

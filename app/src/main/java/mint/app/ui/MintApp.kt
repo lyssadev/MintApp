@@ -15,6 +15,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import mint.app.ui.components.FloatingBottomBar
+import mint.app.ui.screens.DownloadsScreen
 import mint.app.ui.screens.HomePage
 import mint.app.ui.screens.SettingsPage
 
@@ -34,6 +35,7 @@ fun MintApp(modifier: Modifier = Modifier) {
             ) { screen ->
                 when (screen) {
                     Screen.Home -> HomePage(modifier = Modifier.fillMaxSize())
+                    Screen.Downloads -> DownloadsScreen(modifier = Modifier.fillMaxSize())
                     Screen.Settings -> SettingsPage(modifier = Modifier.fillMaxSize())
                 }
             }

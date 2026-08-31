@@ -11,6 +11,7 @@ data class DownloadUiState(
     val phase: DownloadPhase = DownloadPhase.PREPARING,
     val progress: Int = 0,
     val title: String = "",
+    val thumbnailUrl: String? = null,
     val fileName: String = "",
     val savedPath: String = "",
     val isComplete: Boolean = false,
@@ -29,12 +30,13 @@ object DownloadManager {
         _state.value = DownloadUiState()
     }
 
-    internal fun onPreparing(title: String) {
+    internal fun onPreparing(title: String, thumbnailUrl: String?) {
         _state.value = DownloadUiState(
             isDownloading = true,
             phase = DownloadPhase.PREPARING,
             progress = 0,
             title = title,
+            thumbnailUrl = thumbnailUrl,
         )
     }
 

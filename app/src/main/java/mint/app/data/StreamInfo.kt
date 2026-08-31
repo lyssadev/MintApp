@@ -18,7 +18,6 @@ data class StreamOption(
     val formatId: String,
     val url: String,
     val estimatedSizeBytes: Long = 0,
-    val throttled: Boolean = false,
     val hasAudio: Boolean = true,
     val httpHeaders: Map<String, String> = emptyMap(),
 )
