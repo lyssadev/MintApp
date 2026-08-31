@@ -15,4 +15,5 @@ data class StreamOption(
     val label: String,
     val format: String,
     val url: String,
+    val estimatedSizeBytes: Long = 0,
 )

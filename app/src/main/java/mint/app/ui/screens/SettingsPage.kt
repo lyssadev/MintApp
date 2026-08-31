@@ -31,6 +31,7 @@ import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
@@ -52,6 +53,7 @@ import io.github.lyxnx.compose.ui.tablericons.TablerIcons
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandGithub
 import io.github.lyxnx.compose.ui.tablericons.outline.Check
 import io.github.lyxnx.compose.ui.tablericons.outline.ChevronRight
+import io.github.lyxnx.compose.ui.tablericons.outline.Folder
 import io.github.lyxnx.compose.ui.tablericons.outline.Moon
 import io.github.lyxnx.compose.ui.tablericons.outline.Palette
 import io.github.lyxnx.compose.ui.tablericons.outline.Refresh
@@ -59,6 +61,7 @@ import io.github.lyxnx.compose.ui.tablericons.outline.Star
 import io.github.lyxnx.compose.ui.tablericons.outline.X
 import mint.app.BuildConfig
 import mint.app.R
+import mint.app.data.DownloadPreferences
 import mint.app.ui.theme.ThemeController
 import mint.app.ui.theme.ThemeMode
 import mint.app.ui.theme.ThemePreset
@@ -91,6 +94,7 @@ fun SettingsPage(modifier: Modifier = Modifier) {
             )
         }
         AppearanceSection(onOpenThemePicker = { showThemePicker = true })
+        DownloadsSection()
         AboutSection()
         Spacer(modifier = Modifier.height(120.dp))
     }
@@ -459,6 +463,74 @@ private fun ThemeSwatch(color: Color) {
             .clip(CircleShape)
             .background(color),
     )
+}
+
+@Composable
+private fun DownloadsSection() {
+    val context = LocalContext.current
+    var subfolder by remember { mutableStateOf(DownloadPreferences.subfolder(context)) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = "Downloads",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Row(
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = TablerIcons.Outline.Folder,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.size(20.dp),
+                    )
+                    Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                        Text(
+                            text = "Download folder",
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = "Subfolder inside /sdcard/Download/",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                OutlinedTextField(
+                    value = subfolder,
+                    onValueChange = { new ->
+                        subfolder = new
+                        DownloadPreferences.setSubfolder(context, new)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text(text = "Mint") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                )
+                Text(
+                    text = if (subfolder.isBlank()) {
+                        "/sdcard/Download/"
+                    } else {
+                        "/sdcard/Download/${subfolder.trim('/')}/"
+                    },
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
 }
 
 @Composable

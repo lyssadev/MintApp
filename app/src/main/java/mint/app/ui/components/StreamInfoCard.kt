@@ -1,18 +1,14 @@
 package mint.app.ui.components
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
@@ -23,16 +19,18 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
 import mint.app.data.StreamInfo
+import mint.app.data.StreamOption
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun StreamInfoCard(
     info: StreamInfo,
+    downloading: Boolean,
+    onOptionClick: (StreamOption) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -113,7 +111,7 @@ fun StreamInfoCard(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                OptionChips(info.videoOptions.map { it.label })
+                OptionChips(info.videoOptions, downloading, onOptionClick)
             }
             if (info.audioOptions.isNotEmpty()) {
                 Text(
@@ -121,7 +119,7 @@ fun StreamInfoCard(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                OptionChips(info.audioOptions.map { it.label })
+                OptionChips(info.audioOptions, downloading, onOptionClick)
             }
             if (info.videoOptions.isEmpty() && info.audioOptions.isEmpty()) {
                 Text(
@@ -135,23 +133,65 @@ fun StreamInfoCard(
 }
 
 @Composable
-private fun OptionChips(labels: List<String>) {
+private fun OptionChips(
+    options: List<StreamOption>,
+    downloading: Boolean,
+    onOptionClick: (StreamOption) -> Unit,
+) {
     FlowRow(
         horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
-        labels.forEach { label ->
+        options.forEach { option ->
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.primaryContainer,
+                color = if (downloading) {
+                    MaterialTheme.colorScheme.surfaceContainerHighest
+                } else {
+                    MaterialTheme.colorScheme.primaryContainer
+                },
+                modifier = Modifier
+                    .clip(RoundedCornerShape(10.dp))
+                    .clickable(enabled = !downloading) { onOptionClick(option) },
             ) {
-                Text(
-                    text = label,
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                Column(
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                )
+                    horizontalAlignment = Alignment.Start,
+                ) {
+                    Text(
+                        text = option.label,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = if (downloading) {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        } else {
+                            MaterialTheme.colorScheme.onPrimaryContainer
+                        },
+                    )
+                    if (option.estimatedSizeBytes > 0) {
+                        Text(
+                            text = formatBytes(option.estimatedSizeBytes),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (downloading) {
+                                MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                            } else {
+                                MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+                            },
+                        )
+                    }
+                }
             }
         }
+    }
+}
+
+fun formatBytes(bytes: Long): String {
+    val kb = bytes / 1024.0
+    val mb = kb / 1024.0
+    val gb = mb / 1024.0
+    return when {
+        gb >= 1 -> String.format("%.2f GB", gb)
+        mb >= 1 -> String.format("%.1f MB", mb)
+        kb >= 1 -> String.format("%.0f KB", kb)
+        else -> "$bytes B"
     }
 }

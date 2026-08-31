@@ -33,43 +33,55 @@ object YouTubeResolver {
             streamType == StreamType.POST_LIVE_AUDIO_STREAM ||
             (videoStreams.isEmpty() && videoOnlyStreams.isEmpty())
 
+        val durationSeconds = extractor.length
+
         val videoOptions = (videoStreams + videoOnlyStreams)
-            .sortedByDescending { it.height }
+            .sortedWith(
+                compareByDescending<org.schabi.newpipe.extractor.stream.VideoStream> { it.height }
+                    .thenByDescending { it.isVideoOnly }
+                    .thenBy { formatRank(it.format) },
+            )
+            .distinctBy { it.height }
             .map { stream ->
-                val format = stream.format?.name ?: "unknown"
+                val format = stream.formatLabel()
                 StreamOption(
                     label = "${stream.resolution ?: "unknown"} · $format",
                     format = format,
                     url = stream.url ?: "",
+                    estimatedSizeBytes = estimateSize(stream.bitrate, durationSeconds),
                 )
             }
 
         val audioOptions = audioStreams
-            .sortedByDescending { it.averageBitrate }
             .map { stream ->
-                val format = stream.format?.name ?: "unknown"
-                val bitrate = if (stream.averageBitrate > 0) {
-                    "${stream.averageBitrate / 1000}kbps"
-                } else {
-                    "audio"
-                }
+                val format = stream.formatLabel()
+                val bitrate = if (stream.averageBitrate > 0) stream.averageBitrate else stream.bitrate
                 StreamOption(
-                    label = "$bitrate · $format",
+                    label = "${stream.bitrateLabel()} · $format",
                     format = format,
                     url = stream.url ?: "",
+                    estimatedSizeBytes = estimateSize(bitrate, durationSeconds),
                 )
             }
+            .distinctBy { it.label }
+            .sortedWith(compareByDescending<StreamOption> { it.bitrateKbps() })
+            .take(4)
 
         StreamInfo(
             title = extractor.name,
             uploader = extractor.uploaderName,
             thumbnailUrl = extractor.thumbnails.firstOrNull()?.url,
-            durationText = formatDuration(extractor.length),
+            durationText = formatDuration(durationSeconds),
             isMusicOnly = isMusicOnly,
             streamType = streamType.name,
             videoOptions = videoOptions,
             audioOptions = audioOptions,
         )
+    }
+
+    private fun estimateSize(bitrateBps: Int, durationSeconds: Long): Long {
+        if (bitrateBps <= 0 || durationSeconds <= 0) return 0
+        return (bitrateBps.toLong() * durationSeconds) / 8
     }
 
     private fun formatDuration(seconds: Long): String {
@@ -82,5 +94,45 @@ object YouTubeResolver {
         } else {
             "%d:%02d".format(m, s)
         }
+    }
+
+    private fun formatRank(format: org.schabi.newpipe.extractor.MediaFormat?): Int {
+        val name = format?.name ?: return 99
+        return when (name) {
+            "MPEG_4" -> 0
+            "v3GPP" -> 1
+            "WEBM" -> 2
+            else -> 3
+        }
+    }
+
+    private fun org.schabi.newpipe.extractor.stream.VideoStream.formatLabel(): String =
+        when (format?.name) {
+            "MPEG_4" -> "mp4"
+            "v3GPP" -> "3gp"
+            "WEBM" -> "webm"
+            else -> format?.suffix ?: "unknown"
+        }
+
+    private fun org.schabi.newpipe.extractor.stream.AudioStream.formatLabel(): String =
+        when (format?.name) {
+            "M4A" -> "m4a"
+            "MP3" -> "mp3"
+            "OPUS" -> "opus"
+            "WEBMA", "WEBMA_OPUS" -> "webm"
+            "FLAC" -> "flac"
+            else -> format?.suffix ?: "unknown"
+        }
+
+    private fun org.schabi.newpipe.extractor.stream.AudioStream.bitrateLabel(): String {
+        val itagBitrate = itagItem?.bitrate ?: 0
+        val streamBitrate = if (averageBitrate > 0) averageBitrate else bitrate
+        val bitrate = if (itagBitrate > 0) itagBitrate else streamBitrate
+        return if (bitrate > 0) "${bitrate / 1000}kbps" else "audio"
+    }
+
+    private fun StreamOption.bitrateKbps(): Int {
+        val match = Regex("(\\d+)kbps").find(label)
+        return match?.groupValues?.get(1)?.toIntOrNull() ?: 0
     }
 }
