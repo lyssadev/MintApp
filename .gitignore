@@ -1,0 +1,31 @@
+*.iml
+.gradle
+**/build/
+/captures
+.local
+.classpath
+.project
+.DS_Store
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+/.idea/caches
+/.idea/libraries
+/.idea/modules.xml
+/.idea/workspace.xml
+/.idea/navEditor.xml
+/.idea/assetWizardSettings.xml
+
+# NDK
+.externalNativeBuild
+.cxx
+
+# Android
+local.properties
+*.apk
+*.aab
+*.ap_
+*.dex
