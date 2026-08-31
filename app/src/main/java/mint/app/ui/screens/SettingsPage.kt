@@ -640,7 +640,9 @@ private fun AboutSection() {
                     icon = TablerIcons.Outline.Refresh,
                     title = "Check for updates",
                     subtitle = "You're on v${BuildConfig.VERSION_NAME}",
-                    onClick = { },
+                    onClick = {
+                        // noop: not implemented yet
+                    },
                 )
             }
         }
