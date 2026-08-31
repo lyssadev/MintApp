@@ -5,9 +5,7 @@ import android.content.Intent
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -54,8 +52,9 @@ import androidx.compose.ui.unit.sp
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import mint.app.ui.theme.RobotoMonoMedium
+import mint.app.ui.theme.ThemeController
+import mint.app.ui.theme.applyThemeAwareEdgeToEdge
 import mint.app.ui.theme.logo_green
-import mint.app.ui.theme.medium_gray
 
 private const val TYPED_TEXT = "int"
 private const val LETTER_START_FRAMES = 6
@@ -71,16 +70,8 @@ private const val WORD_BASELINE_OFFSET_DP = 25
 class SplashActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.light(
-                android.graphics.Color.TRANSPARENT,
-                android.graphics.Color.TRANSPARENT,
-            ),
-            navigationBarStyle = SystemBarStyle.light(
-                android.graphics.Color.TRANSPARENT,
-                android.graphics.Color.TRANSPARENT,
-            ),
-        )
+        ThemeController.init(this)
+        applyThemeAwareEdgeToEdge()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             overrideActivityTransition(
                 Activity.OVERRIDE_TRANSITION_OPEN,
@@ -201,7 +192,7 @@ private fun SplashScreen(onFinished: () -> Unit) {
             Text(
                 text = "v${BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.labelSmall,
-                color = medium_gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }

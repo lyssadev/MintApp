@@ -1,22 +1,27 @@
 package mint.app
 
-import android.graphics.Color
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
+import androidx.compose.runtime.LaunchedEffect
 import mint.app.ui.MintApp
 import mint.app.ui.theme.MintTheme
+import mint.app.ui.theme.ThemeController
+import mint.app.ui.theme.applyThemeAwareEdgeToEdge
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge(
-            statusBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
-            navigationBarStyle = SystemBarStyle.light(Color.TRANSPARENT, Color.TRANSPARENT),
-        )
+        ThemeController.init(this)
+        applyThemeAwareEdgeToEdge()
         setContent {
+            LaunchedEffect(
+                ThemeController.mode,
+                ThemeController.presetId,
+                ThemeController.dynamicColor,
+            ) {
+                applyThemeAwareEdgeToEdge()
+            }
             MintTheme {
                 MintApp()
             }

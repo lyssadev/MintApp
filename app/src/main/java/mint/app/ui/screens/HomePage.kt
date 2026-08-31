@@ -37,10 +37,10 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.graphics.luminance
 import io.github.lyxnx.compose.ui.tablericons.TablerIcons
 import io.github.lyxnx.compose.ui.tablericons.outline.Clipboard
 import mint.app.ui.theme.RobotoMonoMedium
-import mint.app.ui.theme.medium_gray
 
 @Composable
 fun HomePage(modifier: Modifier = Modifier) {
@@ -61,18 +61,18 @@ fun HomePage(modifier: Modifier = Modifier) {
     val titleStyle = if (textWidthPx > 0f) {
         val bandWidth = textWidthPx * 2f
         val center = -bandWidth + shimmerProgress * (textWidthPx + 2f * bandWidth)
+        val base = MaterialTheme.colorScheme.onBackground
+        val sheen = if (base.luminance() < 0.5f) {
+            Color(0xFF6E6E6E)
+        } else {
+            Color(0xFF9E9E9E)
+        }
         TextStyle(
             fontFamily = RobotoMonoMedium,
             fontWeight = FontWeight.Medium,
             fontSize = 52.sp,
             brush = Brush.linearGradient(
-                colors = listOf(
-                    Color.Black,
-                    Color.Black,
-                    Color(0xFF9E9E9E),
-                    Color.Black,
-                    Color.Black,
-                ),
+                colors = listOf(base, base, sheen, base, base),
                 start = Offset(center - bandWidth / 2f, 0f),
                 end = Offset(center + bandWidth / 2f, 0f),
             ),
@@ -82,7 +82,7 @@ fun HomePage(modifier: Modifier = Modifier) {
             fontFamily = RobotoMonoMedium,
             fontWeight = FontWeight.Medium,
             fontSize = 52.sp,
-            color = Color.Black,
+            color = MaterialTheme.colorScheme.onBackground,
         )
     }
 
@@ -133,7 +133,7 @@ fun HomePage(modifier: Modifier = Modifier) {
             Text(
                 text = "We support YouTube, Instagram & TikTok. More soon!",
                 style = MaterialTheme.typography.bodySmall,
-                color = medium_gray,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
