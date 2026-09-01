@@ -139,15 +139,15 @@ class DownloadService : Service() {
         imageUrl: String?,
     ): Unit = withContext(Dispatchers.IO) {
         val baseName = buildBaseName(title)
+        val tempBase = "$baseName.${downloadId.take(8)}"
         val tempDir = File(cacheDir, "downloads")
         tempDir.mkdirs()
         val actualFile: File
 
         try {
             if (imageUrl != null) {
-                // direct image download via HTTP – no yt-dlp required
-                val ext = imageUrl.substringAfterLast('.', format).substringBefore('?')
-                val imgFile = File(tempDir, "$baseName.$ext")
+                val ext = safeExtension(imageUrl, format)
+                val imgFile = File(tempDir, "$tempBase.$ext")
                 val url = java.net.URL(imageUrl)
                 val conn = url.openConnection() as java.net.HttpURLConnection
                 conn.connectTimeout = 15000
@@ -174,7 +174,7 @@ class DownloadService : Service() {
                 actualFile = imgFile
             } else {
                 tempDir.listFiles()
-                    ?.filter { it.isFile && it.name.startsWith(baseName) }
+                    ?.filter { it.isFile && it.name.startsWith(tempBase) }
                     ?.forEach { it.delete() }
                 val formatSelector = if (formatId.isNotBlank()) {
                     if (!hasAudio) "$formatId+bestaudio[ext=m4a]" else formatId
@@ -185,7 +185,7 @@ class DownloadService : Service() {
                 if (formatSelector.isNotBlank()) {
                     request.addOption("-f", formatSelector)
                 }
-                request.addOption("-o", File(tempDir, baseName).absolutePath)
+                request.addOption("-o", File(tempDir, tempBase).absolutePath)
                 request.addOption("--no-mtime")
                 request.addOption("--no-playlist")
                 request.addOption("--merge-output-format", "mp4")
@@ -239,14 +239,14 @@ class DownloadService : Service() {
 
                 val dest = destFile?.let { File(it) }?.takeIf { it.isFile }
                 val fallback = tempDir.listFiles()
-                    ?.filter { it.isFile && it.name.startsWith(baseName) && !it.name.endsWith(".part") }
+                    ?.filter { it.isFile && it.name.startsWith(tempBase) && !it.name.endsWith(".part") }
                     ?.filterNot { it.name.contains(Regex("\\.f\\d+")) }
                     ?.maxByOrNull { it.lastModified() }
                 actualFile = dest ?: fallback
                     ?: throw Exception("downloaded file not found")
             }
 
-            val actualExt = actualFile.extension.ifBlank { format }
+            val actualExt = actualFile.name.substringAfterLast('.', "").ifBlank { format }
             val finalName = "$baseName.$actualExt"
             val finalMime = mimeFor(actualExt)
             val isAudio = finalMime.startsWith("audio/")
@@ -274,7 +274,7 @@ class DownloadService : Service() {
             val completed = DownloadManager.items.value.filter { it.status == DownloadStatus.COMPLETED }
             NotificationHelper.notifyCompletedList(this@DownloadService, completed)
         } catch (e: Exception) {
-            tempDir.listFiles()?.filter { it.name.startsWith(baseName) }?.forEach { it.delete() }
+            tempDir.listFiles()?.filter { it.name.startsWith(tempBase) }?.forEach { it.delete() }
             throw e
         }
     }
@@ -326,6 +326,12 @@ class DownloadService : Service() {
         } else {
             lines.takeLast(3).joinToString("\n").trim()
         }
+    }
+
+    private fun safeExtension(url: String, fallback: String): String {
+        val path = url.substringBefore('?').substringBefore('#')
+        val ext = path.substringAfterLast('.').lowercase()
+        return if (ext.isNotBlank() && ext.length <= 8 && ext.all { it.isLetterOrDigit() }) ext else fallback
     }
 
     private fun buildBaseName(title: String): String {

@@ -6,6 +6,7 @@ import android.net.Uri
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import mint.app.core.model.DownloadItem
 import mint.app.core.model.DownloadStatus
 import org.json.JSONArray
@@ -35,65 +36,73 @@ object DownloadManager {
     }
 
     fun addActive(id: String, title: String, thumbnailUrl: String?) {
-        _items.value = listOf(
-            DownloadItem(
-                id = id,
-                title = title,
-                thumbnailUrl = thumbnailUrl,
-                status = DownloadStatus.PREPARING,
-            ),
-        ) + _items.value.filterNot { it.id == id }
+        _items.update { current ->
+            listOf(
+                DownloadItem(
+                    id = id,
+                    title = title,
+                    thumbnailUrl = thumbnailUrl,
+                    status = DownloadStatus.PREPARING,
+                ),
+            ) + current.filterNot { it.id == id }
+        }
         refreshActiveCount()
     }
 
     fun updateProgress(id: String, percent: Int, downloadedBytes: Long, totalBytes: Long, speed: Long) {
-        _items.value = _items.value.map {
-            if (it.id == id) {
-                it.copy(
-                    status = DownloadStatus.DOWNLOADING,
-                    progress = percent,
-                    downloadedBytes = downloadedBytes,
-                    totalBytes = totalBytes,
-                    speedBytesPerSec = speed,
-                    error = null,
-                )
-            } else {
-                it
+        _items.update { list ->
+            list.map {
+                if (it.id == id) {
+                    it.copy(
+                        status = DownloadStatus.DOWNLOADING,
+                        progress = percent,
+                        downloadedBytes = downloadedBytes,
+                        totalBytes = totalBytes,
+                        speedBytesPerSec = speed,
+                        error = null,
+                    )
+                } else {
+                    it
+                }
             }
         }
     }
 
     fun updatePhase(id: String, status: DownloadStatus) {
-        _items.value = _items.value.map {
-            if (it.id == id) {
-                it.copy(
-                    status = status,
-                    progress = if (status == DownloadStatus.PROCESSING) 100 else it.progress,
-                )
-            } else {
-                it
+        _items.update { list ->
+            list.map {
+                if (it.id == id) {
+                    it.copy(
+                        status = status,
+                        progress = if (status == DownloadStatus.PROCESSING) 100 else it.progress,
+                    )
+                } else {
+                    it
+                }
             }
         }
         refreshActiveCount()
     }
 
     fun complete(id: String, fileName: String, savedPath: String, uri: String?, mime: String, sizeBytes: Long) {
-        _items.value = _items.value.map {
-            if (it.id == id) {
-                it.copy(
-                    status = DownloadStatus.COMPLETED,
-                    progress = 100,
-                    fileName = fileName,
-                    savedPath = savedPath,
-                    uri = uri,
-                    mime = mime,
-                    downloadedBytes = sizeBytes,
-                    totalBytes = sizeBytes,
-                    speedBytesPerSec = 0,
-                    error = null,
-                )
-            } else {
-                it
+        _items.update { list ->
+            list.map {
+                if (it.id == id) {
+                    it.copy(
+                        status = DownloadStatus.COMPLETED,
+                        progress = 100,
+                        fileName = fileName,
+                        savedPath = savedPath,
+                        uri = uri,
+                        mime = mime,
+                        downloadedBytes = sizeBytes,
+                        totalBytes = sizeBytes,
+                        speedBytesPerSec = 0,
+                        error = null,
+                    )
+                } else {
+                    it
+                }
             }
         }
         persist()
@@ -101,16 +110,18 @@ object DownloadManager {
     }
 
     fun fail(id: String, error: String) {
-        _items.value = _items.value.map {
-            if (it.id == id) {
-                it.copy(
-                    status = DownloadStatus.FAILED,
-                    progress = 0,
-                    speedBytesPerSec = 0,
-                    error = error,
-                )
-            } else {
-                it
+        _items.update { list ->
+            list.map {
+                if (it.id == id) {
+                    it.copy(
+                        status = DownloadStatus.FAILED,
+                        progress = 0,
+                        speedBytesPerSec = 0,
+                        error = error,
+                    )
+                } else {
+                    it
+                }
             }
         }
         persist()
@@ -118,12 +129,12 @@ object DownloadManager {
     }
 
     fun cancel(id: String) {
-        _items.value = _items.value.filterNot { it.id == id }
+        _items.update { it.filterNot { x -> x.id == id } }
         refreshActiveCount()
     }
 
     fun remove(id: String) {
-        _items.value = _items.value.filterNot { it.id == id }
+        _items.update { it.filterNot { x -> x.id == id } }
         persist()
     }
 

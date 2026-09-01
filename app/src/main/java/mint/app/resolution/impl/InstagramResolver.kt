@@ -180,17 +180,6 @@ object InstagramResolver : Resolver {
 
     private fun mediaOptions(item: JSONObject, index: Int): List<MediaFormat> {
         val out = mutableListOf<MediaFormat>()
-        bestImageUrl(item)?.let { imageUrl ->
-            out += MediaFormat(
-                label = "Image ${index + 1} · jpg",
-                format = "jpg",
-                formatId = "",
-                url = imageUrl,
-                estimatedSizeBytes = 0,
-                hasAudio = false,
-                httpHeaders = emptyMap(),
-            )
-        }
         bestVideoUrl(item)?.let { videoUrl ->
             out += MediaFormat(
                 label = "Video ${index + 1} · mp4",
@@ -199,6 +188,18 @@ object InstagramResolver : Resolver {
                 url = videoUrl,
                 estimatedSizeBytes = 0,
                 hasAudio = item.optBoolean("has_audio", true),
+                httpHeaders = emptyMap(),
+            )
+            return out
+        }
+        bestImageUrl(item)?.let { imageUrl ->
+            out += MediaFormat(
+                label = "Image ${index + 1} · jpg",
+                format = "jpg",
+                formatId = "",
+                url = imageUrl,
+                estimatedSizeBytes = 0,
+                hasAudio = false,
                 httpHeaders = emptyMap(),
             )
         }
