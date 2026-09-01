@@ -1,4 +1,4 @@
-package mint.app.data
+package mint.app.core.storage
 
 import android.content.ContentValues
 import android.content.Context
