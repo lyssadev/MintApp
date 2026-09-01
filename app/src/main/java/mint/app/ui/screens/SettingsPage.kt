@@ -74,6 +74,7 @@ import mint.app.connection.InstagramLoginActivity
 import mint.app.connection.TikTokLoginActivity
 import mint.app.core.prefs.ConnectionPreferences
 import mint.app.core.prefs.DownloadPreferences
+import mint.app.core.update.UpdateUiState
 import mint.app.resolution.impl.InstagramResolver
 import mint.app.ui.theme.ThemeController
 import mint.app.ui.theme.ThemeMode
@@ -810,7 +811,7 @@ private fun AboutSection() {
                     title = "Check for updates",
                     subtitle = "You're on v${BuildConfig.VERSION_NAME}",
                     onClick = {
-                        // noop: not implemented yet
+                        UpdateUiState.manualCheck(context)
                     },
                 )
             }
