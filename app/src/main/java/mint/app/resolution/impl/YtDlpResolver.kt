@@ -45,7 +45,7 @@ object YtDlpResolver : Resolver {
         }.start()
     }
 
-    override fun supports(url: String): Boolean = !url.contains("tiktok.com")
+    override fun supports(url: String): Boolean = !url.contains("tiktok.com") && !url.contains("tiktokv.com")
 
     override suspend fun resolve(url: String): MediaItem = withContext(Dispatchers.IO) {
         try {
