@@ -33,6 +33,7 @@ class DownloadService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val jobs = ConcurrentHashMap<String, Job>()
     private val processIds = ConcurrentHashMap<String, String>()
+    private val canceled = ConcurrentHashMap<String, Boolean>()
     private val titles = ConcurrentHashMap<String, String>()
     private val thumbnails = ConcurrentHashMap<String, String?>()
     @Volatile private var startedForeground = false
@@ -58,6 +59,7 @@ class DownloadService : Service() {
         val estimatedSize = intent.getLongExtra(EXTRA_ESTIMATED_SIZE, 0L)
         val hasAudio = intent.getBooleanExtra(EXTRA_HAS_AUDIO, true)
         val thumbnailUrl = intent.getStringExtra(EXTRA_THUMBNAIL)
+        val imageUrl = intent.getStringExtra(EXTRA_IMAGE_URL)
 
         titles[downloadId] = title
         thumbnails[downloadId] = thumbnailUrl
@@ -76,7 +78,10 @@ class DownloadService : Service() {
 
         val job = scope.launch {
             try {
-                download(downloadId, originalUrl, formatId, title, format, estimatedSize, hasAudio, thumbnailUrl)
+                download(
+                    downloadId, originalUrl, formatId, title, format,
+                    estimatedSize, hasAudio, thumbnailUrl, imageUrl,
+                )
             } catch (e: YoutubeDL.CanceledException) {
                 Log.d(TAG, "download cancelled: $downloadId")
                 NotificationHelper.dismiss(this@DownloadService, downloadId)
@@ -94,6 +99,7 @@ class DownloadService : Service() {
                 processIds.remove(downloadId)
                 titles.remove(downloadId)
                 thumbnails.remove(downloadId)
+                canceled.remove(downloadId)
                 activeCount--
                 if (activeCount <= 0) {
                     startedForeground = false
@@ -130,63 +136,95 @@ class DownloadService : Service() {
         estimatedSize: Long,
         hasAudio: Boolean,
         thumbnailUrl: String?,
+        imageUrl: String?,
     ): Unit = withContext(Dispatchers.IO) {
         val baseName = buildBaseName(title)
         val tempDir = File(cacheDir, "downloads")
         tempDir.mkdirs()
+        val actualFile: File
 
         try {
-            val formatSelector = if (!hasAudio) "$formatId+bestaudio[ext=m4a]" else formatId
-            val request = YoutubeDLRequest(originalUrl)
-            request.addOption("-f", formatSelector)
-            request.addOption("-o", File(tempDir, baseName).absolutePath)
-            request.addOption("--no-mtime")
-            request.addOption("--no-playlist")
-            request.addOption("--throttled-rate", "100K")
-            request.addOption("--hls-prefer-ffmpeg")
-            request.addOption("--retries", "10")
-            request.addOption("--fragment-retries", "10")
-
-            val processId = "mint_$downloadId"
-            processIds[downloadId] = processId
-
-            var lastBytes = 0L
-            var lastTime = 0L
-            val callback: (Float, Long, String?) -> Unit = { progress, eta, line ->
-                val isProcessing = line != null && (line.contains("Merger", true) ||
-                    line.contains("ffmpeg", true) ||
-                    line.contains("Converting", true) ||
-                    line.contains("Deleting", true) ||
-                    line.contains("Moving", true) ||
-                    line.contains("Fixup", true) ||
-                    line.contains("Embedding", true))
-                if (isProcessing) {
-                    DownloadManager.updatePhase(downloadId, DownloadStatus.PROCESSING)
-                    NotificationHelper.notifyProcessing(this@DownloadService, downloadId, title, thumbnailUrl)
-                } else {
-                    val p = progress.toFloat().coerceIn(0f, 100f)
-                    val percent = p.toInt()
-                    val downloaded = (p / 100.0 * estimatedSize).toLong().coerceAtLeast(0)
-                    val now = System.currentTimeMillis()
-                    val speed = if (lastTime > 0 && now > lastTime && downloaded >= lastBytes) {
-                        ((downloaded - lastBytes) * 1000 / (now - lastTime))
-                    } else {
-                        0L
+            if (imageUrl != null) {
+                // direct image download via HTTP – no yt-dlp required
+                val ext = imageUrl.substringAfterLast('.', format).substringBefore('?')
+                val imgFile = File(tempDir, "$baseName.$ext")
+                val url = java.net.URL(imageUrl)
+                val conn = url.openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 15000
+                conn.readTimeout = 15000
+                conn.instanceFollowRedirects = true
+                conn.connect()
+                val total = conn.contentLengthLong.coerceAtLeast(0)
+                conn.inputStream.use { input ->
+                    imgFile.outputStream().use { output ->
+                        val buf = ByteArray(64 * 1024)
+                        var downloaded = 0L
+                        while (true) {
+                            if (canceled[downloadId] == true) throw YoutubeDL.CanceledException()
+                            val read = input.read(buf)
+                            if (read < 0) break
+                            output.write(buf, 0, read)
+                            downloaded += read
+                            val p = if (total > 0) ((downloaded * 100) / total).toInt() else 0
+                            DownloadManager.updateProgress(downloadId, p, downloaded, total, 0)
+                            NotificationHelper.updateProgress(this@DownloadService, downloadId, p, title, thumbnailUrl)
+                        }
                     }
-                    lastBytes = downloaded
-                    lastTime = now
-                    Log.d(TAG, "progress[$downloadId]: $percent% | eta: ${eta}s")
-                    DownloadManager.updateProgress(downloadId, percent, downloaded, estimatedSize, speed)
-                    NotificationHelper.updateProgress(this@DownloadService, downloadId, percent, title, thumbnailUrl)
                 }
+                actualFile = imgFile
+            } else {
+                val formatSelector = if (!hasAudio) "$formatId+bestaudio[ext=m4a]" else formatId
+                val request = YoutubeDLRequest(originalUrl)
+                request.addOption("-f", formatSelector)
+                request.addOption("-o", File(tempDir, baseName).absolutePath)
+                request.addOption("--no-mtime")
+                request.addOption("--no-playlist")
+                request.addOption("--throttled-rate", "100K")
+                request.addOption("--hls-prefer-ffmpeg")
+                request.addOption("--retries", "10")
+                request.addOption("--fragment-retries", "10")
+
+                val processId = "mint_$downloadId"
+                processIds[downloadId] = processId
+
+                var lastBytes = 0L
+                var lastTime = 0L
+                val callback: (Float, Long, String?) -> Unit = { progress, eta, line ->
+                    val isProcessing = line != null && (line.contains("Merger", true) ||
+                        line.contains("ffmpeg", true) ||
+                        line.contains("Converting", true) ||
+                        line.contains("Deleting", true) ||
+                        line.contains("Moving", true) ||
+                        line.contains("Fixup", true) ||
+                        line.contains("Embedding", true))
+                    if (isProcessing) {
+                        DownloadManager.updatePhase(downloadId, DownloadStatus.PROCESSING)
+                        NotificationHelper.notifyProcessing(this@DownloadService, downloadId, title, thumbnailUrl)
+                    } else {
+                        val p = progress.toFloat().coerceIn(0f, 100f)
+                        val percent = p.toInt()
+                        val downloaded = (p / 100.0 * estimatedSize).toLong().coerceAtLeast(0)
+                        val now = System.currentTimeMillis()
+                        val speed = if (lastTime > 0 && now > lastTime && downloaded >= lastBytes) {
+                            ((downloaded - lastBytes) * 1000 / (now - lastTime))
+                        } else {
+                            0L
+                        }
+                        lastBytes = downloaded
+                        lastTime = now
+                        Log.d(TAG, "progress[$downloadId]: $percent% | eta: ${eta}s")
+                        DownloadManager.updateProgress(downloadId, percent, downloaded, estimatedSize, speed)
+                        NotificationHelper.updateProgress(this@DownloadService, downloadId, percent, title, thumbnailUrl)
+                    }
+                }
+
+                YoutubeDL.getInstance().execute(request, processId, callback)
+
+                actualFile = tempDir.listFiles()
+                    ?.filter { it.isFile && it.name.startsWith(baseName) && !it.name.endsWith(".part") }
+                    ?.maxByOrNull { it.lastModified() }
+                    ?: throw Exception("downloaded file not found")
             }
-
-            YoutubeDL.getInstance().execute(request, processId, callback)
-
-            val actualFile = tempDir.listFiles()
-                ?.filter { it.isFile && it.name.startsWith(baseName) && !it.name.endsWith(".part") }
-                ?.maxByOrNull { it.lastModified() }
-                ?: throw Exception("downloaded file not found")
 
             val actualExt = actualFile.extension.ifBlank { format }
             val finalName = "$baseName.$actualExt"
@@ -306,6 +344,7 @@ class DownloadService : Service() {
         private const val EXTRA_ESTIMATED_SIZE = "estimated_size"
         private const val EXTRA_HAS_AUDIO = "has_audio"
         private const val EXTRA_THUMBNAIL = "thumbnail"
+        private const val EXTRA_IMAGE_URL = "image_url"
         const val EXTRA_CANCEL_ID = "cancel_id"
 
         @Volatile private var instance: DownloadService? = null
@@ -319,6 +358,7 @@ class DownloadService : Service() {
             estimatedSize: Long = 0,
             hasAudio: Boolean = true,
             thumbnail: String? = null,
+            imageUrl: String? = null,
         ): String {
             val downloadId = UUID.randomUUID().toString()
             val intent = Intent(context, DownloadService::class.java).apply {
@@ -330,12 +370,14 @@ class DownloadService : Service() {
                 putExtra(EXTRA_ESTIMATED_SIZE, estimatedSize)
                 putExtra(EXTRA_HAS_AUDIO, hasAudio)
                 putExtra(EXTRA_THUMBNAIL, thumbnail)
+                putExtra(EXTRA_IMAGE_URL, imageUrl)
             }
             ContextCompat.startForegroundService(context, intent)
             return downloadId
         }
 
         fun cancel(id: String) {
+            instance?.canceled?.set(id, true)
             instance?.processIds?.remove(id)?.let { YoutubeDL.getInstance().destroyProcessById(it) }
         }
 

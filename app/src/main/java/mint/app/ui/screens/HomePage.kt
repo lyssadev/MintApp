@@ -123,6 +123,7 @@ fun HomePage(modifier: Modifier = Modifier) {
                 option.estimatedSizeBytes,
                 option.hasAudio,
                 info.thumbnailUrl,
+                option.url,
             )
         }
     }
