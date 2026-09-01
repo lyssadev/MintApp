@@ -9,6 +9,7 @@ object DownloadPreferences {
     private const val KEY_SUBFOLDER = "download_subfolder"
     private const val KEY_VIDEO_DIR = "video_dir"
     private const val KEY_AUDIO_DIR = "audio_dir"
+    private const val KEY_IMAGE_DIR = "image_dir"
     private const val KEY_PERMISSIONS_ASKED = "permissions_asked"
 
     fun subfolder(context: Context): String =
@@ -30,6 +31,13 @@ object DownloadPreferences {
 
     fun setAudioDir(context: Context, value: String) {
         prefs(context).edit().putString(KEY_AUDIO_DIR, value.trim().trim('/')).apply()
+    }
+
+    fun imageDir(context: Context): String =
+        prefs(context).getString(KEY_IMAGE_DIR, "images") ?: "images"
+
+    fun setImageDir(context: Context, value: String) {
+        prefs(context).edit().putString(KEY_IMAGE_DIR, value.trim().trim('/')).apply()
     }
 
     fun permissionsAsked(context: Context): Boolean =

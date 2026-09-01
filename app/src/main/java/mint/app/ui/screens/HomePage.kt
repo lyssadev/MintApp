@@ -28,6 +28,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -37,9 +38,12 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -48,19 +52,28 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil3.compose.AsyncImage
 import io.github.lyxnx.compose.ui.tablericons.TablerIcons
 import io.github.lyxnx.compose.ui.tablericons.outline.Clipboard
+import io.github.lyxnx.compose.ui.tablericons.outline.Download
+import io.github.lyxnx.compose.ui.tablericons.outline.X
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import mint.app.service.DownloadService
+import mint.app.core.manager.DownloadManager
+import mint.app.core.model.DownloadItem
+import mint.app.core.model.DownloadStatus
 import mint.app.core.model.MediaFormat
 import mint.app.core.model.MediaItem
+import mint.app.service.DownloadService
 import mint.app.resolution.ResolverRegistry
 import mint.app.ui.components.StreamInfoCard
+import mint.app.ui.components.formatBytes
 import mint.app.ui.theme.RobotoMonoMedium
 
 sealed interface ResolveState {
@@ -73,10 +86,12 @@ sealed interface ResolveState {
 object HomeSession {
     var link by mutableStateOf("")
     var state by mutableStateOf<ResolveState>(ResolveState.Idle)
+    var activeDownloadId by mutableStateOf<String?>(null)
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     fun resolveUrl(url: String) {
         link = url
+        activeDownloadId = null
         state = ResolveState.Loading
         scope.launch {
             state = try {
@@ -194,11 +209,22 @@ fun HomePage(modifier: Modifier = Modifier) {
                     )
                 }
                 is ResolveState.Success -> {
-                    StreamInfoCard(
-                        info = current.info,
-                        downloading = false,
-                        onOptionClick = startDownload,
-                    )
+                    val info = current.info
+                    when {
+                        info.imageOptions.isNotEmpty() -> ImageOptionsSection(
+                            info = info,
+                            onDownloadImage = { option -> startDownload(option) },
+                            onDownloadAll = {
+                                info.imageOptions.forEach { startDownload(it) }
+                            },
+                        )
+                        info.platform == "youtube" -> StreamInfoCard(
+                            info = info,
+                            downloading = false,
+                            onOptionClick = startDownload,
+                        )
+                        else -> AutoDownloadFlow(info = info)
+                    }
                 }
             }
             Spacer(modifier = Modifier.height(120.dp))
@@ -252,4 +278,235 @@ private fun ShimmerTitle() {
         style = titleStyle,
         onTextLayout = { textWidthPx = it.size.width.toFloat() },
     )
+}
+
+@Composable
+private fun ImageOptionsSection(
+    info: MediaItem,
+    onDownloadImage: (MediaFormat) -> Unit,
+    onDownloadAll: () -> Unit,
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = info.title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onBackground,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f),
+            )
+            if (info.imageOptions.size > 1) {
+                Surface(
+                    onClick = onDownloadAll,
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                ) {
+                    Text(
+                        text = "Download all (${info.imageOptions.size})",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                    )
+                }
+            }
+        }
+        info.imageOptions.forEach { option ->
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = MaterialTheme.colorScheme.surfaceContainer,
+                modifier = Modifier.fillMaxWidth(),
+            ) {
+                Row(
+                    modifier = Modifier.padding(8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    AsyncImage(
+                        model = option.url,
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .size(64.dp)
+                            .clip(RoundedCornerShape(10.dp)),
+                    )
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = option.label,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        if (option.estimatedSizeBytes > 0) {
+                            Text(
+                                text = formatBytes(option.estimatedSizeBytes),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    Surface(
+                        onClick = { onDownloadImage(option) },
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        ) {
+                            Icon(
+                                imageVector = TablerIcons.Outline.Download,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(14.dp),
+                            )
+                            Text(
+                                text = "Download",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AutoDownloadFlow(info: MediaItem) {
+    val context = LocalContext.current
+    val items by DownloadManager.items.collectAsState()
+    val activeItem = items.firstOrNull { it.id == HomeSession.activeDownloadId }
+
+    LaunchedEffect(info.originalUrl) {
+        if (HomeSession.activeDownloadId == null) {
+            val id = DownloadService.start(
+                context,
+                info.originalUrl,
+                "best",
+                info.title,
+                "mp4",
+                hasAudio = true,
+                thumbnail = info.thumbnailUrl,
+            )
+            HomeSession.activeDownloadId = id
+        }
+    }
+
+    LaunchedEffect(activeItem?.status) {
+        if (activeItem?.status == DownloadStatus.COMPLETED) {
+            delay(5000)
+            HomeSession.activeDownloadId = null
+            HomeSession.state = ResolveState.Idle
+        }
+    }
+
+    when (activeItem?.status) {
+        null -> {
+            CircularProgressIndicator(
+                modifier = Modifier.size(32.dp),
+                strokeWidth = 3.dp,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        }
+        DownloadStatus.COMPLETED -> AutoDownloadCard(activeItem!!, completed = true)
+        DownloadStatus.FAILED -> Text(
+            text = activeItem!!.error ?: "Download failed",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.error,
+        )
+        else -> AutoDownloadCard(activeItem!!, completed = false)
+    }
+}
+
+@Composable
+private fun AutoDownloadCard(item: DownloadItem, completed: Boolean) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        color = if (completed) {
+            MaterialTheme.colorScheme.primaryContainer
+        } else {
+            MaterialTheme.colorScheme.surfaceContainer
+        },
+    ) {
+        Column(
+            modifier = Modifier.padding(16.dp),
+            verticalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                Icon(
+                    imageVector = if (completed) TablerIcons.Outline.Download else TablerIcons.Outline.Download,
+                    contentDescription = null,
+                    tint = if (completed) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.primary
+                    },
+                    modifier = Modifier.size(18.dp),
+                )
+                Text(
+                    text = when {
+                        completed -> "Download complete"
+                        item.status == DownloadStatus.PREPARING -> "Preparing..."
+                        item.status == DownloadStatus.PROCESSING -> "Processing..."
+                        else -> "Downloading ${item.progress}%"
+                    },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = if (completed) {
+                        MaterialTheme.colorScheme.onPrimaryContainer
+                    } else {
+                        MaterialTheme.colorScheme.onSurface
+                    },
+                )
+                Spacer(modifier = Modifier.weight(1f))
+                if (!completed) {
+                    IconButton(
+                        onClick = { DownloadService.cancel(item.id) },
+                        modifier = Modifier.size(22.dp),
+                    ) {
+                        Icon(
+                            imageVector = TablerIcons.Outline.X,
+                            contentDescription = "Cancel download",
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.size(16.dp),
+                        )
+                    }
+                }
+            }
+            if (completed) {
+                Text(
+                    text = item.fileName,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            } else {
+                if (item.status == DownloadStatus.DOWNLOADING) {
+                    LinearProgressIndicator(
+                        progress = { item.progress / 100f },
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                } else {
+                    LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
+                }
+                if (item.totalBytes > 0) {
+                    Text(
+                        text = "${formatBytes(item.downloadedBytes)} / ${formatBytes(item.totalBytes)}",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+    }
 }

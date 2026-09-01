@@ -192,8 +192,9 @@ class DownloadService : Service() {
             val finalName = "$baseName.$actualExt"
             val finalMime = mimeFor(actualExt)
             val isAudio = finalMime.startsWith("audio/")
+            val isImage = finalMime.startsWith("image/")
 
-            val target = FileSaver.openForWrite(this@DownloadService, finalName, finalMime, isAudio)
+            val target = FileSaver.openForWrite(this@DownloadService, finalName, finalMime, isAudio, isImage)
             try {
                 actualFile.inputStream().use { input ->
                     target.outputStream.use { output ->
@@ -287,6 +288,11 @@ class DownloadService : Service() {
         "flac" -> "audio/flac"
         "wav" -> "audio/wav"
         "mkv" -> "video/x-matroska"
+        "jpg", "jpeg" -> "image/jpeg"
+        "png" -> "image/png"
+        "gif" -> "image/gif"
+        "webp" -> "image/webp"
+        "heic" -> "image/heic"
         else -> "application/octet-stream"
     }
 
@@ -313,7 +319,7 @@ class DownloadService : Service() {
             estimatedSize: Long = 0,
             hasAudio: Boolean = true,
             thumbnail: String? = null,
-        ) {
+        ): String {
             val downloadId = UUID.randomUUID().toString()
             val intent = Intent(context, DownloadService::class.java).apply {
                 putExtra(EXTRA_DOWNLOAD_ID, downloadId)
@@ -326,6 +332,7 @@ class DownloadService : Service() {
                 putExtra(EXTRA_THUMBNAIL, thumbnail)
             }
             ContextCompat.startForegroundService(context, intent)
+            return downloadId
         }
 
         fun cancel(id: String) {

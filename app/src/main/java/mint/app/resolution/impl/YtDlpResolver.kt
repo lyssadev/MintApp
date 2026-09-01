@@ -58,6 +58,11 @@ object YtDlpResolver : Resolver {
                 val vc = f.vcodec ?: "none"
                 ac != "none" && vc == "none"
             }
+            val imageFormats = formats.filter { f ->
+                val vc = f.vcodec ?: "none"
+                val ac = f.acodec ?: "none"
+                vc == "none" && ac == "none" && (f.width ?: 0) > 0
+            }
 
             val isMusicOnly = videoFormats.isEmpty()
             val durationSec = (info.duration ?: 0).toLong()
@@ -98,6 +103,28 @@ object YtDlpResolver : Resolver {
                 .distinctBy { it.label }
                 .take(4)
 
+            val imageOptions = imageFormats
+                .sortedBy { it.formatId ?: "" }
+                .mapIndexed { index, format ->
+                    val label = "Image ${index + 1} · ${format.ext ?: "jpg"}"
+                    MediaFormat(
+                        label = label,
+                        format = format.ext ?: "jpg",
+                        formatId = format.formatId ?: "",
+                        url = format.url ?: "",
+                        estimatedSizeBytes = estimateSize(format, durationSec),
+                        hasAudio = false,
+                        httpHeaders = format.httpHeaders ?: emptyMap(),
+                    )
+                }
+
+            val platform = when {
+                url.contains("youtube.com") || url.contains("youtu.be") || url.contains("youtube-nocookie.com") -> "youtube"
+                url.contains("instagram.com") -> "instagram"
+                url.contains("tiktok.com") -> "tiktok"
+                else -> "other"
+            }
+
             MediaItem(
                 originalUrl = url,
                 title = info.title ?: "Unknown",
@@ -106,8 +133,10 @@ object YtDlpResolver : Resolver {
                 durationText = formatDuration((info.duration ?: 0).toLong()),
                 isMusicOnly = isMusicOnly,
                 streamType = if (isMusicOnly) "AUDIO" else "VIDEO",
+                platform = platform,
                 videoOptions = videoOptions,
                 audioOptions = audioOptions,
+                imageOptions = imageOptions,
             )
         } catch (e: YoutubeDLException) {
             throw Exception("yt-dlp error: ${e.message}", e)

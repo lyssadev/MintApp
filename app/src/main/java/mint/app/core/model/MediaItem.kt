@@ -8,8 +8,10 @@ data class MediaItem(
     val durationText: String,
     val isMusicOnly: Boolean,
     val streamType: String,
+    val platform: String = "other",
     val videoOptions: List<MediaFormat>,
     val audioOptions: List<MediaFormat>,
+    val imageOptions: List<MediaFormat> = emptyList(),
 )
 
 data class MediaFormat(

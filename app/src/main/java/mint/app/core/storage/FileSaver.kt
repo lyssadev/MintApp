@@ -25,9 +25,14 @@ object FileSaver {
         fileName: String,
         mimeType: String,
         isAudio: Boolean,
+        isImage: Boolean = false,
     ): OutputTarget {
         val subfolder = DownloadPreferences.subfolder(context)
-        val typeDir = if (isAudio) DownloadPreferences.audioDir(context) else DownloadPreferences.videoDir(context)
+        val typeDir = when {
+            isAudio -> DownloadPreferences.audioDir(context)
+            isImage -> DownloadPreferences.imageDir(context)
+            else -> DownloadPreferences.videoDir(context)
+        }
         val relativeSub = buildString {
             append(subfolder)
             if (typeDir.isNotBlank()) {
