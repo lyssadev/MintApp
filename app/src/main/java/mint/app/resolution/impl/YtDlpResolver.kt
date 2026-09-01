@@ -144,18 +144,11 @@ object YtDlpResolver : Resolver {
                 else -> "other"
             }
 
-            // For non-YouTube, detect bulk videos (multiple distinct URLs) and label as "Video N"
+            // For non-YouTube, collapse quality variants of the same clip to the best one only
             val finalVideoOptions = if (platform == "youtube") {
                 videoOptions
             } else {
-                val distinct = videoOptions.distinctBy { it.url }
-                if (distinct.size <= 1) {
-                    videoOptions
-                } else {
-                    distinct.mapIndexed { index, opt ->
-                        opt.copy(label = "Video ${index + 1} · ${opt.format}")
-                    }
-                }
+                listOfNotNull(videoOptions.firstOrNull { it.hasAudio } ?: videoOptions.firstOrNull())
             }
 
             MediaItem(
