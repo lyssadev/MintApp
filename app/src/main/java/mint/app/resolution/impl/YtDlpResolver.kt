@@ -60,7 +60,7 @@ object YtDlpResolver : Resolver {
                 writeTikTokCookiesFile()?.let { cookiesFile ->
                     request.addOption("--cookies", cookiesFile.absolutePath)
                 }
-                request.addOption("--no-impersonate")
+                request.addOption("--extractor-args", "tiktok:app_info=musical_ly/35.1.3/2023501030/0")
                 YoutubeDL.getInstance().getInfo(request)
             } else {
                 YoutubeDL.getInstance().getInfo(url)
