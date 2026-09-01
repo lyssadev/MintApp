@@ -331,7 +331,7 @@ class DownloadService : Service() {
     private fun safeExtension(url: String, fallback: String): String {
         val path = url.substringBefore('?').substringBefore('#')
         val ext = path.substringAfterLast('.').lowercase()
-        return if (ext.isNotBlank() && ext.length <= 8 && ext.all { it.isLetterOrDigit() }) ext else fallback
+        return if (ext.isNotBlank() && ext.length <= 8 && ext.all { it.isLetterOrDigit() } && ext in KNOWN_EXTENSIONS) ext else fallback
     }
 
     private fun buildBaseName(title: String): String {
@@ -374,6 +374,11 @@ class DownloadService : Service() {
 
     companion object {
         private const val TAG = "MintDownload"
+
+        private val KNOWN_EXTENSIONS = setOf(
+            "mp4", "m4a", "webm", "3gp", "mp3", "opus", "ogg", "flac", "wav",
+            "mkv", "jpg", "jpeg", "png", "gif", "webp", "heic",
+        )
         private const val EXTRA_DOWNLOAD_ID = "download_id"
         private const val EXTRA_ORIGINAL_URL = "original_url"
         private const val EXTRA_FORMAT_ID = "format_id"
