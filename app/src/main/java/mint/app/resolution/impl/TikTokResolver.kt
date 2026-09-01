@@ -1,6 +1,7 @@
 package mint.app.resolution.impl
 
 import android.content.Context
+import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import mint.app.core.model.MediaFormat
@@ -14,6 +15,8 @@ import java.util.concurrent.TimeUnit
 
 object TikTokResolver : Resolver {
 
+    private const val TAG = "TikTokResolver"
+
     private const val UA = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
 
     private val client = OkHttpClient.Builder()
@@ -23,13 +26,13 @@ object TikTokResolver : Resolver {
         .followSslRedirects(true)
         .build()
 
-    private val VIDEO_RE = Regex("https?://(?:www\\.)?tiktok\\.com/@[\\w.-]+/video/(\\d+)")
-    private val PHOTO_RE = Regex("https?://(?:www\\.)?tiktok\\.com/@[\\w.-]+/photo/(\\d+)")
-    private val ID_RE = Regex("https?://[^/]+/(?:video|photo)/(\\d+)")
-    private val SHARE_RE = Regex("https?://(?:www\\.)?tiktok\\.com/t/[A-Za-z0-9_-]+")
-    private val MOBILE_RE = Regex("https?://m\\.tiktok\\.com/v/\\d+")
-    private val SHORT_RE = Regex("https?://vm\\.tiktok\\.com/[\\w]+")
-    private val TIKTOKV_RE = Regex("https?://www\\.tiktokv?\\.com/share/video/\\d+")
+    private val VIDEO_RE = Regex("https?://(?:www\\.)?tiktok\\.com/@[\\w.-]+/video/(\\d+)/?")
+    private val PHOTO_RE = Regex("https?://(?:www\\.)?tiktok\\.com/@[\\w.-]+/photo/(\\d+)/?")
+    private val ID_RE = Regex("https?://[^/]+/(?:video|photo)/(\\d+)/?")
+    private val SHARE_RE = Regex("https?://(?:www\\.)?tiktok\\.com/t/[A-Za-z0-9_-]+/?")
+    private val MOBILE_RE = Regex("https?://m\\.tiktok\\.com/v/\\d+/?")
+    private val SHORT_RE = Regex("https?://vm\\.tiktok\\.com/[\\w]+/?")
+    private val TIKTOKV_RE = Regex("https?://www\\.tiktokv?\\.com/share/video/\\d+/?")
 
     @Volatile private var appContext: Context? = null
 
@@ -44,15 +47,28 @@ object TikTokResolver : Resolver {
     }
 
     override suspend fun resolve(url: String): MediaItem = withContext(Dispatchers.IO) {
+        Log.d(TAG, "resolve: url=$url")
         val finalUrl = resolveShortUrl(url)
-        val itemId = VIDEO_RE.find(finalUrl)?.groupValues?.get(1)
-            ?: PHOTO_RE.find(finalUrl)?.groupValues?.get(1)
-            ?: ID_RE.find(finalUrl)?.groupValues?.get(1)
+        Log.d(TAG, "resolve: finalUrl=$finalUrl")
+        val videoMatch = VIDEO_RE.find(finalUrl)
+        val photoMatch = PHOTO_RE.find(finalUrl)
+        val idMatch = ID_RE.find(finalUrl)
+        Log.d(TAG, "resolve: VIDEO_RE=$videoMatch PHOTO_RE=$photoMatch ID_RE=$idMatch")
+        val itemId = videoMatch?.groupValues?.get(1)
+            ?: photoMatch?.groupValues?.get(1)
+            ?: idMatch?.groupValues?.get(1)
             ?: throw Exception("Could not extract TikTok video/photo ID from URL: $finalUrl")
+        Log.d(TAG, "resolve: itemId=$itemId")
 
         val html = fetchPage(finalUrl)
+        Log.d(TAG, "resolve: html length=${html.length}")
         val data = extractUniversalData(html)
-            ?: throw Exception("TikTok page blocked or challenge required. Try logging in from Settings → Connections → TikTok.")
+        if (data == null) {
+            Log.w(TAG, "resolve: __UNIVERSAL_DATA_FOR_REHYDRATION__ not found in HTML")
+            Log.d(TAG, "resolve: first 500 chars of HTML: ${html.take(500)}")
+            throw Exception("TikTok page blocked or challenge required. Try logging in from Settings → Connections → TikTok.")
+        }
+        Log.d(TAG, "resolve: data extracted successfully")
 
         buildItem(finalUrl, data, itemId)
     }
@@ -64,6 +80,7 @@ object TikTokResolver : Resolver {
         ) {
             return trimmed
         }
+        Log.d(TAG, "resolveShortUrl: following redirects for $trimmed")
         val request = Request.Builder()
             .url(trimmed)
             .header("User-Agent", UA)
@@ -71,11 +88,14 @@ object TikTokResolver : Resolver {
             .header("Accept-Language", "en-US,en;q=0.5")
             .build()
         return client.newCall(request).execute().use { resp ->
-            resp.request.url.toString()
+            val resolved = resp.request.url.toString()
+            Log.d(TAG, "resolveShortUrl: status=${resp.code} resolved=$resolved")
+            resolved
         }
     }
 
     private fun fetchPage(url: String): String {
+        Log.d(TAG, "fetchPage: url=$url")
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", UA)
@@ -88,30 +108,49 @@ object TikTokResolver : Resolver {
             .header("Upgrade-Insecure-Requests", "1")
             .build()
         return client.newCall(request).execute().use { resp ->
+            Log.d(TAG, "fetchPage: status=${resp.code} contentType=${resp.header("Content-Type")}")
             if (!resp.isSuccessful) throw Exception("Failed to fetch TikTok page: ${resp.code}")
             resp.body?.string() ?: throw Exception("Empty response from TikTok")
         }
     }
 
     private fun extractUniversalData(html: String): JSONObject? {
-        if (html.contains("Please wait") || html.contains("_wafchallengeid")) return null
+        if (html.contains("Please wait") || html.contains("_wafchallengeid")) {
+            Log.w(TAG, "extractUniversalData: WAF challenge detected (Please wait / _wafchallengeid)")
+            return null
+        }
         val regex = Regex(
             """<script[^>]*id="__UNIVERSAL_DATA_FOR_REHYDRATION__"[^>]*>(.*?)</script>""",
             RegexOption.DOT_MATCHES_ALL,
         )
-        val match = regex.find(html) ?: return null
+        val match = regex.find(html)
+        if (match == null) {
+            Log.w(TAG, "extractUniversalData: regex did not find __UNIVERSAL_DATA_FOR_REHYDRATION__ script tag")
+            return null
+        }
         val raw = match.groupValues[1]
-        return runCatching { JSONObject(raw) }.getOrNull()
+        return runCatching { JSONObject(raw) }
+            .onSuccess { Log.d(TAG, "extractUniversalData: parsed JSON, keys=${it.length()}") }
+            .onFailure { Log.w(TAG, "extractUniversalData: failed to parse JSON: ${it.message}") }
+            .getOrNull()
     }
 
     private fun buildItem(url: String, data: JSONObject, itemId: String): MediaItem {
         val scope = data.optJSONObject("__DEFAULT_SCOPE__")
-            ?: throw Exception("No scope in TikTok data")
+        if (scope == null) {
+            Log.w(TAG, "buildItem: no __DEFAULT_SCOPE__; top keys=${data.keys().asSequence().toList()}")
+            throw Exception("No scope in TikTok data")
+        }
         val videoDetail = scope.optJSONObject("webapp.video-detail")
-            ?: throw Exception("No video detail in TikTok data")
-        val itemStruct = videoDetail.optJSONObject("itemInfo")
-            ?.optJSONObject("itemStruct")
-            ?: throw Exception("No item struct in TikTok data")
+        if (videoDetail == null) {
+            Log.w(TAG, "buildItem: no webapp.video-detail; scope keys=${scope.keys().asSequence().toList()}")
+            throw Exception("No video detail in TikTok data")
+        }
+        val itemStruct = videoDetail.optJSONObject("itemInfo")?.optJSONObject("itemStruct")
+        if (itemStruct == null) {
+            Log.w(TAG, "buildItem: no itemInfo.itemStruct; video-detail keys=${videoDetail.keys().asSequence().toList()}")
+            throw Exception("No item struct in TikTok data")
+        }
 
         val desc = itemStruct.optString("desc", "TikTok post").take(120)
         val author = itemStruct.optJSONObject("author")?.optString("uniqueId") ?: "tiktok"
