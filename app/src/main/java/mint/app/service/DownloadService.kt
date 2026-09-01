@@ -173,12 +173,22 @@ class DownloadService : Service() {
                 }
                 actualFile = imgFile
             } else {
-                val formatSelector = if (!hasAudio) "$formatId+bestaudio[ext=m4a]" else formatId
+                tempDir.listFiles()
+                    ?.filter { it.isFile && it.name.startsWith(baseName) }
+                    ?.forEach { it.delete() }
+                val formatSelector = if (formatId.isNotBlank()) {
+                    if (!hasAudio) "$formatId+bestaudio[ext=m4a]" else formatId
+                } else {
+                    ""
+                }
                 val request = YoutubeDLRequest(originalUrl)
-                request.addOption("-f", formatSelector)
+                if (formatSelector.isNotBlank()) {
+                    request.addOption("-f", formatSelector)
+                }
                 request.addOption("-o", File(tempDir, baseName).absolutePath)
                 request.addOption("--no-mtime")
                 request.addOption("--no-playlist")
+                request.addOption("--merge-output-format", "mp4")
                 request.addOption("--throttled-rate", "100K")
                 request.addOption("--hls-prefer-ffmpeg")
                 request.addOption("--retries", "10")
@@ -189,7 +199,14 @@ class DownloadService : Service() {
 
                 var lastBytes = 0L
                 var lastTime = 0L
+                var destFile: String? = null
                 val callback: (Float, Long, String?) -> Unit = { progress, eta, line ->
+                    if (line != null) {
+                        val destMatch = Regex("""\[download\] Destination:\s+(.+)""").find(line)
+                        if (destMatch != null) destFile = destMatch.groupValues[1].trim()
+                        val mergeMatch = Regex("""\[Merger\] Merging formats into\s+"(.+)"""").find(line)
+                        if (mergeMatch != null) destFile = mergeMatch.groupValues[1].trim()
+                    }
                     val isProcessing = line != null && (line.contains("Merger", true) ||
                         line.contains("ffmpeg", true) ||
                         line.contains("Converting", true) ||
@@ -220,9 +237,12 @@ class DownloadService : Service() {
 
                 YoutubeDL.getInstance().execute(request, processId, callback)
 
-                actualFile = tempDir.listFiles()
+                val dest = destFile?.let { File(it) }?.takeIf { it.isFile }
+                val fallback = tempDir.listFiles()
                     ?.filter { it.isFile && it.name.startsWith(baseName) && !it.name.endsWith(".part") }
+                    ?.filterNot { it.name.contains(Regex("\\.f\\d+")) }
                     ?.maxByOrNull { it.lastModified() }
+                actualFile = dest ?: fallback
                     ?: throw Exception("downloaded file not found")
             }
 

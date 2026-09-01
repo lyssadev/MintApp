@@ -6,10 +6,13 @@ import kotlinx.coroutines.withContext
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLException
+import com.yausername.youtubedl_android.YoutubeDLRequest
 import com.yausername.youtubedl_android.mapper.VideoFormat
 import mint.app.core.model.MediaFormat
 import mint.app.core.model.MediaItem
+import mint.app.core.prefs.ConnectionPreferences
 import mint.app.resolution.Resolver
+import java.io.File
 
 object YtDlpResolver : Resolver {
 
@@ -46,7 +49,15 @@ object YtDlpResolver : Resolver {
 
     override suspend fun resolve(url: String): MediaItem = withContext(Dispatchers.IO) {
         try {
-            val info = YoutubeDL.getInstance().getInfo(url)
+            val info = if (url.contains("instagram.com")) {
+                val request = YoutubeDLRequest(url)
+                writeCookiesFile()?.let { cookiesFile ->
+                    request.addOption("--cookies", cookiesFile.absolutePath)
+                }
+                YoutubeDL.getInstance().getInfo(request)
+            } else {
+                YoutubeDL.getInstance().getInfo(url)
+            }
             val formats = info.formats ?: emptyList()
 
             val videoFormats = formats.filter { f ->
@@ -144,7 +155,6 @@ object YtDlpResolver : Resolver {
                 else -> "other"
             }
 
-            // For non-YouTube, collapse quality variants of the same clip to the best one only
             val finalVideoOptions = if (platform == "youtube") {
                 videoOptions
             } else {
@@ -169,6 +179,32 @@ object YtDlpResolver : Resolver {
             throw Exception("yt-dlp error: ${e.message}", e)
         } catch (e: InterruptedException) {
             throw Exception("Request cancelled", e)
+        }
+    }
+
+    private fun writeCookiesFile(): File? {
+        val ctx = appContext ?: return null
+        val cookies = ConnectionPreferences.instagramCookies(ctx)
+        if (cookies.isEmpty()) return null
+        return try {
+            val file = File(ctx.cacheDir, "instagram_cookies.txt")
+            val lines = mutableListOf("# Netscape HTTP Cookie File")
+            cookies.forEach { (name, value) ->
+                val secure = if (name in setOf("sessionid", "csrftoken", "ds_user_id")) "TRUE" else "FALSE"
+                lines += listOf(
+                    "#HttpOnly_.instagram.com",
+                    "TRUE",
+                    "/",
+                    secure,
+                    "0",
+                    name,
+                    value,
+                ).joinToString("\t")
+            }
+            file.writeText(lines.joinToString("\n"))
+            file
+        } catch (_: Exception) {
+            null
         }
     }
 

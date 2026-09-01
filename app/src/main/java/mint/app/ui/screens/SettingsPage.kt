@@ -1,8 +1,12 @@
 package mint.app.ui.screens
 
+import android.app.Activity
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -51,17 +55,23 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import io.github.lyxnx.compose.ui.tablericons.TablerIcons
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandGithub
+import io.github.lyxnx.compose.ui.tablericons.outline.BrandInstagram
 import io.github.lyxnx.compose.ui.tablericons.outline.Check
 import io.github.lyxnx.compose.ui.tablericons.outline.ChevronRight
 import io.github.lyxnx.compose.ui.tablericons.outline.Folder
+import io.github.lyxnx.compose.ui.tablericons.outline.Link
 import io.github.lyxnx.compose.ui.tablericons.outline.Moon
 import io.github.lyxnx.compose.ui.tablericons.outline.Palette
 import io.github.lyxnx.compose.ui.tablericons.outline.Refresh
 import io.github.lyxnx.compose.ui.tablericons.outline.Star
+import io.github.lyxnx.compose.ui.tablericons.outline.PlugConnectedX
 import io.github.lyxnx.compose.ui.tablericons.outline.X
 import mint.app.BuildConfig
 import mint.app.R
+import mint.app.connection.InstagramLoginActivity
+import mint.app.core.prefs.ConnectionPreferences
 import mint.app.core.prefs.DownloadPreferences
+import mint.app.resolution.impl.InstagramResolver
 import mint.app.ui.theme.ThemeController
 import mint.app.ui.theme.ThemeMode
 import mint.app.ui.theme.ThemePreset
@@ -94,6 +104,7 @@ fun SettingsPage(modifier: Modifier = Modifier) {
             )
         }
         AppearanceSection(onOpenThemePicker = { showThemePicker = true })
+        ConnectionsSection()
         DownloadsSection()
         AboutSection()
         Spacer(modifier = Modifier.height(120.dp))
@@ -463,6 +474,126 @@ private fun ThemeSwatch(color: Color) {
             .clip(CircleShape)
             .background(color),
     )
+}
+
+@Composable
+private fun ConnectionsSection() {
+    val context = LocalContext.current
+    var linked by remember { mutableStateOf(ConnectionPreferences.isInstagramLinked(context)) }
+
+    val loginLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) {
+        if (it.resultCode == Activity.RESULT_OK) {
+            linked = ConnectionPreferences.isInstagramLinked(context)
+        }
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = "Connections",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+        ) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = TablerIcons.Outline.BrandInstagram,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(24.dp),
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = "Instagram",
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = when {
+                            linked -> "Linked · used for Instagram downloads"
+                            else -> "Login to unlock full access"
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (linked) {
+                    Surface(
+                        onClick = {
+                            ConnectionPreferences.clearInstagram(context)
+                            InstagramResolver.clearSession()
+                            linked = false
+                            Toast.makeText(
+                                context,
+                                "Instagram unlinked",
+                                Toast.LENGTH_SHORT,
+                            ).show()
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.errorContainer,
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = TablerIcons.Outline.PlugConnectedX,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onErrorContainer,
+                                modifier = Modifier.size(14.dp),
+                            )
+                            Text(
+                                text = "Unlink",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onErrorContainer,
+                            )
+                        }
+                    }
+                } else {
+                    Surface(
+                        onClick = {
+                            loginLauncher.launch(
+                                Intent(context, InstagramLoginActivity::class.java),
+                            )
+                        },
+                        shape = RoundedCornerShape(10.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = TablerIcons.Outline.Link,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(14.dp),
+                            )
+                            Text(
+                                text = "Link",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable

@@ -53,6 +53,12 @@
             </intent-filter>
         </activity>
 
+        <activity
+            android:name=".connection.InstagramLoginActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.Mint" />
+
         <service
             android:name=".service.DownloadService"
             android:exported="false"

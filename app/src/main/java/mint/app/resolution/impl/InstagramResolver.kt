@@ -1,32 +1,30 @@
 package mint.app.resolution.impl
 
 import android.content.Context
-import android.util.Log
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import mint.app.core.model.MediaFormat
 import mint.app.core.model.MediaItem
+import mint.app.core.prefs.ConnectionPreferences
+import mint.app.resolution.LoginRequiredException
 import mint.app.resolution.Resolver
 import okhttp3.Cookie
 import okhttp3.CookieJar
-import okhttp3.FormBody
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
 import org.json.JSONArray
 import org.json.JSONObject
+import java.security.SecureRandom
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 object InstagramResolver : Resolver {
 
-    private const val TAG = "MintInit"
     private const val APP_ID = "936619743392459"
-    private const val GRAPHQL_DOC_ID = "27130156389949648"
-    private const val GRAPHQL_URL = "https://www.instagram.com/api/graphql"
     private const val ENCODING_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
     private val SHORTCODE_RE = Regex("(?:p|tv|reel|reels)/([A-Za-z0-9_-]+)")
-    private val SJS_RE = Regex("<script\\b[^>]*\\bdata-sjs>(\\{.+?\\})</script>", setOf(RegexOption.DOT_MATCHES_ALL))
+
+    @Volatile private var appContext: Context? = null
 
     private val cookies = ConcurrentHashMap<String, MutableList<Cookie>>()
     private val client = OkHttpClient.Builder()
@@ -38,15 +36,54 @@ object InstagramResolver : Resolver {
                 cookies.getOrPut(url.host) { mutableListOf() }.addAll(list)
             }
 
-            override fun loadForRequest(url: okhttp3.HttpUrl): List<Cookie> =
-                cookies[url.host] ?: emptyList()
+            override fun loadForRequest(url: okhttp3.HttpUrl): List<Cookie> {
+                val host = url.host
+                val jarCookies = cookies[host] ?: emptyList()
+                if (host.contains("instagram.com")) {
+                    val saved = sessionCookies()
+                    if (saved.isNotEmpty()) {
+                        val names = jarCookies.map { it.name }.toSet()
+                        return saved.filterNot { it.name in names } + jarCookies
+                    }
+                }
+                return jarCookies
+            }
         })
         .build()
 
     private val ua = "Mozilla/5.0 (Linux; Android 13) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Mobile Safari/537.36"
 
+    private fun sessionCookies(): List<Cookie> {
+        val ctx = appContext ?: return emptyList()
+        return ConnectionPreferences.instagramCookies(ctx).mapNotNull { (name, value) ->
+            runCatching {
+                Cookie.Builder()
+                    .name(name)
+                    .value(value)
+                    .domain("instagram.com")
+                    .path("/")
+                    .httpOnly()
+                    .secure()
+                    .build()
+            }.getOrNull()
+        }
+    }
+
+    fun clearSession() {
+        cookies.clear()
+    }
+
     override fun initialize(context: Context) {
-        // no native init needed
+        appContext = context.applicationContext
+        seedSessionCookies()
+    }
+
+    private fun seedSessionCookies() {
+        val saved = sessionCookies()
+        if (saved.isEmpty()) return
+        val list = cookies.getOrPut("www.instagram.com") { mutableListOf() }
+        val names = list.map { it.name }.toSet()
+        saved.filterNot { it.name in names }.forEach { list.add(it) }
     }
 
     override fun supports(url: String): Boolean =
@@ -55,34 +92,70 @@ object InstagramResolver : Resolver {
     override suspend fun resolve(url: String): MediaItem = withContext(Dispatchers.IO) {
         val shortcode = SHORTCODE_RE.find(url)?.groupValues?.get(1)
             ?: throw Exception("Could not extract Instagram shortcode")
-        Log.d(TAG, "ig resolve shortcode=$shortcode")
 
-        val page = fetch("https://www.instagram.com/p/$shortcode/")
-        var media = findMediaFromPage(page)
-        if (media == null) {
-            Log.d(TAG, "ig embedded json not found, falling back to graphql")
-            media = graphqlMedia(shortcode, url)
+        val product = restMedia(shortcode)
+        if (product == null) {
+            val hasSession = appContext?.let { ConnectionPreferences.isInstagramLinked(it) } == true
+            if (!hasSession) throw LoginRequiredException(
+                "Instagram login required. Open Settings → Connections to link your account.",
+            )
+            throw Exception("Instagram post is not accessible without login")
         }
-        if (media == null) throw Exception("Instagram post is not accessible without login")
-
-        val product = media.optJSONObject("if_not_gated_logged_out")
-            ?: throw Exception("Instagram post is not accessible without login")
         buildItem(url, product)
     }
 
-    private fun buildItem(url: String, product: JSONObject): MediaItem {
-        val username = product.optJSONObject("user")?.optString("username") ?: "instagram"
-        val title = product.optJSONObject("caption")?.optString("text")?.take(120) ?: "Instagram post"
-        val thumbnail = bestImageUrl(product)
+    private fun restMedia(shortcode: String): JSONObject? {
+        return try {
+            val mediaId = shortcodeToPk(shortcode).toString()
+            val csrfToken = generateCsrf()
+            cookies.getOrPut("www.instagram.com") { mutableListOf() }
+                .add(Cookie.Builder()
+                    .name("csrftoken")
+                    .value(csrfToken)
+                    .domain("instagram.com")
+                    .path("/")
+                    .secure()
+                    .build())
+            val request = Request.Builder()
+                .url("https://www.instagram.com/api/v1/media/$mediaId/info/")
+                .header("User-Agent", ua)
+                .header("Accept", "*/*")
+                .header("Origin", "https://www.instagram.com")
+                .header("X-IG-App-ID", APP_ID)
+                .header("X-ASBD-ID", "129477")
+                .header("X-IG-WWW-Claim", "0")
+                .header("X-CSRFToken", csrfToken)
+                .header("X-Requested-With", "XMLHttpRequest")
+                .header("Connection", "keep-alive")
+                .header("Referer", "https://www.instagram.com/")
+                .header("Sec-Fetch-Dest", "empty")
+                .header("Sec-Fetch-Mode", "cors")
+                .header("Sec-Fetch-Site", "same-origin")
+                .build()
+            client.newCall(request).execute().use { resp ->
+                val text = resp.body?.string() ?: return null
+                if (!resp.isSuccessful) return null
+                val json = runCatching { JSONObject(text) }.getOrNull() ?: return null
+                json.optJSONArray("items")?.optJSONObject(0)
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun buildItem(url: String, item: JSONObject): MediaItem {
+        val username = item.optJSONObject("user")?.optString("username") ?: "instagram"
+        val title = item.optJSONObject("caption")?.optString("text")?.take(120) ?: "Instagram post"
+        val thumbnail = bestImageUrl(item)
 
         val options = mutableListOf<MediaFormat>()
-        val carousel = product.optJSONArray("carousel_media")
+        val carousel = item.optJSONArray("carousel_media")
         if (carousel != null && carousel.length() > 0) {
             for (i in 0 until carousel.length()) {
                 options += mediaOptions(carousel.optJSONObject(i), i)
             }
         } else {
-            options += mediaOptions(product, 0)
+            options += mediaOptions(item, 0)
         }
 
         val videos = options.filter { it.format == "mp4" }
@@ -129,7 +202,6 @@ object InstagramResolver : Resolver {
                 httpHeaders = emptyMap(),
             )
         }
-        Log.d(TAG, "ig media #$index -> ${out.map { it.format }}")
         return out
     }
 
@@ -163,95 +235,10 @@ object InstagramResolver : Resolver {
         return best
     }
 
-    private fun findMediaFromPage(page: String): JSONObject? {
-        for (match in SJS_RE.findAll(page)) {
-            val body = match.groupValues.getOrNull(1) ?: continue
-            val json = runCatching { JSONObject(body) }.getOrNull() ?: continue
-            deepFind(json, "xig_polaris_media")?.let { return it }
-        }
-        return null
-    }
-
-    private fun deepFind(node: Any?, key: String): JSONObject? {
-        if (node == null) return null
-        return when (node) {
-            is JSONObject -> {
-                if (node.has(key)) node.optJSONObject(key) else {
-                    val it = node.keys()
-                    while (it.hasNext()) {
-                        deepFind(node.opt(it.next()), key)?.let { return it }
-                    }
-                    null
-                }
-            }
-            is JSONArray -> {
-                for (i in 0 until node.length()) {
-                    deepFind(node.opt(i), key)?.let { return it }
-                }
-                null
-            }
-            else -> null
-        }
-    }
-
-    private fun graphqlMedia(shortcode: String, referer: String): JSONObject? {
-        return try {
-            val mediaId = shortcodeToPk(shortcode).toString()
-            val home = fetch("https://www.instagram.com/")
-            val lsd = Regex("""\["LSD",\[\],\{"token":"([^"]+)""").find(home)?.groupValues?.get(1)
-            val csrf = cookies["www.instagram.com"]
-                ?.firstOrNull { it.name == "csrftoken" }?.value
-            if (lsd == null) {
-                Log.e(TAG, "ig no lsd token")
-                return null
-            }
-            val body = FormBody.Builder()
-                .add("lsd", lsd)
-                .add("fb_api_caller_class", "RelayModern")
-                .add("fb_api_req_friendly_name", "PolarisLoggedOutDesktopWWWPostRootContentQuery")
-                .add("server_timestamps", "true")
-                .add("variables", JSONObject().put("media_id", mediaId).toString())
-                .add("doc_id", GRAPHQL_DOC_ID)
-                .build()
-            val request = Request.Builder()
-                .url(GRAPHQL_URL)
-                .post(body)
-                .header("User-Agent", ua)
-                .header("X-IG-App-ID", APP_ID)
-                .header("X-ASBD-ID", "359341")
-                .header("X-IG-WWW-Claim", "0")
-                .header("X-FB-Friendly-Name", "PolarisLoggedOutDesktopWWWPostRootContentQuery")
-                .header("X-FB-LSD", lsd)
-                .header("X-CSRFToken", csrf ?: "")
-                .header("X-Requested-With", "XMLHttpRequest")
-                .header("Referer", referer)
-                .build()
-            client.newCall(request).execute().use { resp ->
-                val text = resp.body?.string() ?: return null
-                if (!resp.isSuccessful) {
-                    Log.e(TAG, "ig graphql http ${resp.code}")
-                    return null
-                }
-                val json = runCatching { JSONObject(text) }.getOrNull() ?: return null
-                deepFind(json, "xig_polaris_media")
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "ig graphql failed: ${e.message}")
-            null
-        }
-    }
-
-    private fun fetch(url: String): String {
-        val request = Request.Builder()
-            .url(url)
-            .header("User-Agent", ua)
-            .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,*/*;q=0.8")
-            .header("Accept-Language", "en-US,en;q=0.9")
-            .build()
-        client.newCall(request).execute().use { resp ->
-            if (!resp.isSuccessful) throw Exception("HTTP ${resp.code} for $url")
-            return resp.body?.string() ?: throw Exception("Empty response for $url")
-        }
+    private fun generateCsrf(): String {
+        val bytes = ByteArray(16)
+        SecureRandom().nextBytes(bytes)
+        return bytes.joinToString("") { "%02x".format(it) }
     }
 
     private fun shortcodeToPk(shortcode: String): Long {

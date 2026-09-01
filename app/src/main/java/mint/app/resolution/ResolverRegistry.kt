@@ -7,12 +7,10 @@ import mint.app.resolution.impl.YtDlpResolver
 
 object ResolverRegistry {
 
-    private val resolvers: List<Resolver> = listOf(YtDlpResolver, InstagramResolver)
+    private val resolvers: List<Resolver> = listOf(InstagramResolver, YtDlpResolver)
 
     fun init(context: Context) {
-        resolvers.forEach { resolver ->
-            if (resolver is YtDlpResolver) resolver.initialize(context)
-        }
+        resolvers.forEach { resolver -> resolver.initialize(context) }
     }
 
     suspend fun resolve(url: String): MediaItem {
@@ -21,6 +19,8 @@ object ResolverRegistry {
             if (!resolver.supports(url)) continue
             lastError = try {
                 return resolver.resolve(url)
+            } catch (e: LoginRequiredException) {
+                throw e
             } catch (e: Exception) {
                 e
             }
