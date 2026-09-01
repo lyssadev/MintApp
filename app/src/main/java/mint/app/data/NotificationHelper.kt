@@ -6,7 +6,6 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.net.Uri
 import androidx.core.app.NotificationCompat
 import mint.app.MainActivity
 import mint.app.R
@@ -15,6 +14,7 @@ object NotificationHelper {
 
     const val CHANNEL_ID = "downloads"
     private const val BASE_ID = 100
+    private const val COMPLETED_LIST_ID = 20000
 
     private var channelCreated = false
 
@@ -55,16 +55,6 @@ object NotificationHelper {
         )
     }
 
-    private fun viewIntent(context: Context, uri: Uri, mime: String): PendingIntent? {
-        val intent = Intent(Intent.ACTION_VIEW).apply {
-            setDataAndType(uri, mime)
-            addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
-        }
-        return PendingIntent.getActivity(
-            context, 1, intent, PendingIntent.FLAG_IMMUTABLE,
-        ).takeIf { intent.resolveActivity(context.packageManager) != null }
-    }
-
     private var cachedIconUrl: String? = null
     private var cachedIcon: android.graphics.Bitmap? = null
 
@@ -99,19 +89,6 @@ object NotificationHelper {
         return builder.build()
     }
 
-    fun buildComplete(context: Context, title: String, fileName: String, fileUri: Uri?, mime: String): Notification {
-        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_notification_check)
-            .setContentTitle(title)
-            .setContentText("Download complete — $fileName")
-            .setAutoCancel(true)
-            .setContentIntent(contentIntent(context))
-        if (fileUri != null) {
-            viewIntent(context, fileUri, mime)?.let { builder.setContentIntent(it) }
-        }
-        return builder.build()
-    }
-
     fun updateProgress(context: Context, downloadId: String, progress: Int, title: String, thumbnailUrl: String? = null) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
@@ -142,9 +119,23 @@ object NotificationHelper {
         nm.notify(idFor(downloadId), builder.build())
     }
 
-    fun notifyComplete(context: Context, downloadId: String, title: String, fileName: String, fileUri: Uri?, mime: String) {
+    fun notifyCompletedList(context: Context, completed: List<DownloadItem>) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.notify(idFor(downloadId), buildComplete(context, title, fileName, fileUri, mime))
+        val names = completed.map { it.fileName.ifBlank { it.title } }
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification_check)
+            .setContentTitle("Downloads complete")
+            .setContentText("${names.size} file(s) downloaded")
+            .setAutoCancel(true)
+            .setContentIntent(contentIntent(context))
+        val inbox = NotificationCompat.InboxStyle()
+            .setBigContentTitle("${names.size} file(s) downloaded")
+        names.takeLast(10).forEach { inbox.addLine(it) }
+        if (names.size > 10) {
+            inbox.setSummaryText("+${names.size - 10} more")
+        }
+        builder.setStyle(inbox)
+        nm.notify(COMPLETED_LIST_ID, builder.build())
     }
 
     fun notifyError(context: Context, downloadId: String, title: String, error: String) {
@@ -162,5 +153,10 @@ object NotificationHelper {
     fun dismiss(context: Context, downloadId: String) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.cancel(idFor(downloadId))
+    }
+
+    fun dismissCompletedList(context: Context) {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.cancel(COMPLETED_LIST_ID)
     }
 }

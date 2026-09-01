@@ -209,14 +209,9 @@ class DownloadService : Service() {
 
             DownloadManager.complete(downloadId, finalName, target.displayPath, target.uri?.toString(), finalMime, sizeBytes)
             vibrate()
-            NotificationHelper.notifyComplete(
-                this@DownloadService,
-                downloadId,
-                title,
-                finalName,
-                target.uri,
-                finalMime,
-            )
+            NotificationHelper.dismiss(this@DownloadService, downloadId)
+            val completed = DownloadManager.items.value.filter { it.status == DownloadStatus.COMPLETED }
+            NotificationHelper.notifyCompletedList(this@DownloadService, completed)
         } catch (e: Exception) {
             tempDir.listFiles()?.filter { it.name.startsWith(baseName) }?.forEach { it.delete() }
             throw e
