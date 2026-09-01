@@ -1,4 +1,4 @@
-package mint.app.data
+package mint.app.resolution.impl
 
 import android.content.Context
 import kotlinx.coroutines.Dispatchers
@@ -7,13 +7,16 @@ import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLException
 import com.yausername.youtubedl_android.mapper.VideoFormat
+import mint.app.core.model.MediaFormat
+import mint.app.core.model.MediaItem
+import mint.app.resolution.Resolver
 
-object YouTubeResolver {
+object YtDlpResolver : Resolver {
 
     private var initialized = false
     private var appContext: Context? = null
 
-    fun init(context: Context) {
+    override fun initialize(context: Context) {
         if (initialized) return
         try {
             appContext = context.applicationContext
@@ -39,7 +42,9 @@ object YouTubeResolver {
         }.start()
     }
 
-    suspend fun resolve(url: String): StreamInfo = withContext(Dispatchers.IO) {
+    override fun supports(url: String): Boolean = true
+
+    override suspend fun resolve(url: String): MediaItem = withContext(Dispatchers.IO) {
         try {
             val info = YoutubeDL.getInstance().getInfo(url)
             val formats = info.formats ?: emptyList()
@@ -65,7 +70,7 @@ object YouTubeResolver {
                 .distinctBy { it.height?.let { it / 144 * 144 } ?: 0 }
                 .map { format ->
                     val label = buildVideoLabel(format)
-                    StreamOption(
+                    MediaFormat(
                         label = label,
                         format = format.ext ?: "mp4",
                         formatId = format.formatId ?: "",
@@ -80,7 +85,7 @@ object YouTubeResolver {
                 .sortedByDescending { it.tbr }
                 .map { format ->
                     val label = buildAudioLabel(format)
-                    StreamOption(
+                    MediaFormat(
                         label = label,
                         format = format.ext ?: "m4a",
                         formatId = format.formatId ?: "",
@@ -93,7 +98,7 @@ object YouTubeResolver {
                 .distinctBy { it.label }
                 .take(4)
 
-            StreamInfo(
+            MediaItem(
                 originalUrl = url,
                 title = info.title ?: "Unknown",
                 uploader = info.uploader ?: "Unknown",

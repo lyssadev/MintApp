@@ -20,14 +20,14 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
-import mint.app.data.StreamInfo
-import mint.app.data.StreamOption
+import mint.app.core.model.MediaFormat
+import mint.app.core.model.MediaItem
 
 @Composable
 fun StreamInfoCard(
-    info: StreamInfo,
+    info: MediaItem,
     downloading: Boolean,
-    onOptionClick: (StreamOption) -> Unit,
+    onOptionClick: (MediaFormat) -> Unit,
     modifier: Modifier = Modifier,
 ) {
     Surface(
@@ -131,9 +131,9 @@ fun StreamInfoCard(
 
 @Composable
 private fun OptionChips(
-    options: List<StreamOption>,
+    options: List<MediaFormat>,
     downloading: Boolean,
-    onOptionClick: (StreamOption) -> Unit,
+    onOptionClick: (MediaFormat) -> Unit,
 ) {
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),

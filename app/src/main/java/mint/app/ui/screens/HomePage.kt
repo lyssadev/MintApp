@@ -57,16 +57,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import mint.app.data.DownloadService
-import mint.app.data.StreamInfo
-import mint.app.data.StreamOption
-import mint.app.data.YouTubeResolver
+import mint.app.core.model.MediaFormat
+import mint.app.core.model.MediaItem
+import mint.app.resolution.ResolverRegistry
 import mint.app.ui.components.StreamInfoCard
 import mint.app.ui.theme.RobotoMonoMedium
 
 private sealed interface ResolveState {
     data object Idle : ResolveState
     data object Loading : ResolveState
-    data class Success(val info: StreamInfo) : ResolveState
+    data class Success(val info: MediaItem) : ResolveState
     data class Error(val message: String) : ResolveState
 }
 
@@ -84,7 +84,7 @@ fun HomePage(modifier: Modifier = Modifier) {
 
     val context = LocalContext.current
 
-    val startDownload: (StreamOption) -> Unit = { option ->
+    val startDownload: (MediaFormat) -> Unit = { option ->
         val info = (HomeSession.state as? ResolveState.Success)?.info
         if (info != null) {
             DownloadService.start(
@@ -106,7 +106,7 @@ fun HomePage(modifier: Modifier = Modifier) {
             HomeSession.state = ResolveState.Loading
             HomeSession.scope.launch {
                 HomeSession.state = try {
-                    ResolveState.Success(YouTubeResolver.resolve(trimmed))
+                    ResolveState.Success(ResolverRegistry.resolve(trimmed))
                 } catch (e: Exception) {
                     ResolveState.Error(e.message ?: "Couldn't resolve link")
                 }
