@@ -8,7 +8,7 @@ A fast, lightweight downloader app for social media and video platforms.
 
 ## About
 
-Mint lets you paste any supported link and download the media straight to your device. No ads, no bloat, just downloads.
+Mint was built for fun as a personal project — got tired of using other downloaders that either had ads, rate limits, or missing features. So I made my own. It lets you paste any supported link and download the media straight to your device. No ads, no bloat, just downloads.
 
 ## How it works
 
