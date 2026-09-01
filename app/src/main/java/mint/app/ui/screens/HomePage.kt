@@ -63,17 +63,29 @@ import mint.app.resolution.ResolverRegistry
 import mint.app.ui.components.StreamInfoCard
 import mint.app.ui.theme.RobotoMonoMedium
 
-private sealed interface ResolveState {
+sealed interface ResolveState {
     data object Idle : ResolveState
     data object Loading : ResolveState
     data class Success(val info: MediaItem) : ResolveState
     data class Error(val message: String) : ResolveState
 }
 
-private object HomeSession {
+object HomeSession {
     var link by mutableStateOf("")
     var state by mutableStateOf<ResolveState>(ResolveState.Idle)
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    fun resolveUrl(url: String) {
+        link = url
+        state = ResolveState.Loading
+        scope.launch {
+            state = try {
+                ResolveState.Success(ResolverRegistry.resolve(url))
+            } catch (e: Exception) {
+                ResolveState.Error(e.message ?: "Couldn't resolve link")
+            }
+        }
+    }
 }
 
 @Composable
@@ -103,14 +115,7 @@ fun HomePage(modifier: Modifier = Modifier) {
     val resolve: (String) -> Unit = { url ->
         val trimmed = url.trim()
         if (trimmed.isNotEmpty()) {
-            HomeSession.state = ResolveState.Loading
-            HomeSession.scope.launch {
-                HomeSession.state = try {
-                    ResolveState.Success(ResolverRegistry.resolve(trimmed))
-                } catch (e: Exception) {
-                    ResolveState.Error(e.message ?: "Couldn't resolve link")
-                }
-            }
+            HomeSession.resolveUrl(trimmed)
         }
     }
 
