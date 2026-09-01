@@ -138,6 +138,17 @@ object DownloadManager {
         persist()
     }
 
+    fun clearCompletedAndFailed(onDelete: (DownloadItem) -> Unit) {
+        _items.update { current ->
+            val toRemove = current.filter {
+                it.status == DownloadStatus.COMPLETED || it.status == DownloadStatus.FAILED
+            }
+            toRemove.forEach(onDelete)
+            current - toRemove
+        }
+        persist()
+    }
+
     fun fileExists(context: Context, item: DownloadItem): Boolean {
         return try {
             when {

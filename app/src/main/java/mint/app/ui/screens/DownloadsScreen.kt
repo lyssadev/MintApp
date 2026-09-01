@@ -66,6 +66,7 @@ fun DownloadsScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
     val items by DownloadManager.items.collectAsState()
     var pendingDelete by remember { mutableStateOf<DownloadItem?>(null) }
+    var pendingDeleteAll by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) { DownloadManager.load(context) }
 
@@ -82,15 +83,32 @@ fun DownloadsScreen(modifier: Modifier = Modifier) {
         verticalArrangement = Arrangement.Top,
     ) {
         Spacer(modifier = Modifier.height(56.dp))
-        Text(
-            text = "Downloads",
-            style = MaterialTheme.typography.titleLarge.copy(
-                fontFamily = RobotoMonoMedium,
-                fontWeight = FontWeight.Medium,
-                fontSize = 32.sp,
-            ),
-            color = MaterialTheme.colorScheme.onBackground,
-        )
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = "Downloads",
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontFamily = RobotoMonoMedium,
+                    fontWeight = FontWeight.Medium,
+                    fontSize = 32.sp,
+                ),
+                color = MaterialTheme.colorScheme.onBackground,
+            )
+            val deletableCount = completedItems.size + failedItems.size
+            if (deletableCount > 0) {
+                IconButton(onClick = { pendingDeleteAll = true }) {
+                    Icon(
+                        imageVector = TablerIcons.Outline.Trash,
+                        contentDescription = "Delete all",
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(24.dp),
+                    )
+                }
+            }
+        }
         Spacer(modifier = Modifier.height(28.dp))
 
         if (activeItems.isNotEmpty()) {
@@ -156,6 +174,31 @@ fun DownloadsScreen(modifier: Modifier = Modifier) {
             },
         )
     }
+
+    if (pendingDeleteAll) {
+        AlertDialog(
+            onDismissRequest = { pendingDeleteAll = false },
+            title = { Text("Delete all?") },
+            text = { Text("All ${completedItems.size + failedItems.size} completed and failed downloads, including their files, will be permanently removed from your device.") },
+            confirmButton = {
+                TextButton(onClick = {
+                    deleteAllEntries(context)
+                    pendingDeleteAll = false
+                }) {
+                    Text("Delete all", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDeleteAll = false }) {
+                    Text("Cancel")
+                }
+            },
+        )
+    }
+}
+
+private fun deleteAllEntries(context: Context) {
+    DownloadManager.clearCompletedAndFailed { item -> deleteEntry(context, item) }
 }
 
 @Composable
