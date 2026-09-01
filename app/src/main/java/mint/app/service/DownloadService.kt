@@ -246,7 +246,8 @@ class DownloadService : Service() {
                     ?: throw Exception("downloaded file not found")
             }
 
-            val actualExt = actualFile.name.substringAfterLast('.', "").ifBlank { format }
+            val rawExt = actualFile.name.substringAfterLast('.', "").ifBlank { format }
+            val actualExt = rawExt.takeIf { it in KNOWN_EXTENSIONS } ?: format
             val finalName = "$baseName.$actualExt"
             val finalMime = mimeFor(actualExt)
             val isAudio = finalMime.startsWith("audio/")
