@@ -60,6 +60,7 @@ object YtDlpResolver : Resolver {
                 writeTikTokCookiesFile()?.let { cookiesFile ->
                     request.addOption("--cookies", cookiesFile.absolutePath)
                 }
+                request.addOption("--no-impersonate")
                 YoutubeDL.getInstance().getInfo(request)
             } else {
                 YoutubeDL.getInstance().getInfo(url)
