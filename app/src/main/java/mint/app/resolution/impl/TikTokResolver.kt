@@ -25,7 +25,11 @@ object TikTokResolver : Resolver {
 
     private val VIDEO_RE = Regex("https?://(?:www\\.)?tiktok\\.com/@[\\w.-]+/video/(\\d+)")
     private val PHOTO_RE = Regex("https?://(?:www\\.)?tiktok\\.com/@[\\w.-]+/photo/(\\d+)")
+    private val ID_RE = Regex("https?://[^/]+/(?:video|photo)/(\\d+)")
+    private val SHARE_RE = Regex("https?://(?:www\\.)?tiktok\\.com/t/[A-Za-z0-9_-]+")
+    private val MOBILE_RE = Regex("https?://m\\.tiktok\\.com/v/\\d+")
     private val SHORT_RE = Regex("https?://vm\\.tiktok\\.com/[\\w]+")
+    private val TIKTOKV_RE = Regex("https?://www\\.tiktokv?\\.com/share/video/\\d+")
 
     @Volatile private var appContext: Context? = null
 
@@ -33,26 +37,35 @@ object TikTokResolver : Resolver {
         appContext = context.applicationContext
     }
 
-    override fun supports(url: String): Boolean =
-        VIDEO_RE.containsMatchIn(url) || PHOTO_RE.containsMatchIn(url) || SHORT_RE.containsMatchIn(url)
+    override fun supports(url: String): Boolean = when {
+        url.contains("tiktok.com") -> true
+        url.contains("tiktokv.com") -> true
+        else -> false
+    }
 
     override suspend fun resolve(url: String): MediaItem = withContext(Dispatchers.IO) {
         val finalUrl = resolveShortUrl(url)
         val itemId = VIDEO_RE.find(finalUrl)?.groupValues?.get(1)
             ?: PHOTO_RE.find(finalUrl)?.groupValues?.get(1)
-            ?: throw Exception("Could not extract TikTok video/photo ID")
+            ?: ID_RE.find(finalUrl)?.groupValues?.get(1)
+            ?: throw Exception("Could not extract TikTok video/photo ID from URL: $finalUrl")
 
         val html = fetchPage(finalUrl)
         val data = extractUniversalData(html)
-            ?: throw Exception("TikTok page blocked or challenge required; falling back to yt-dlp")
+            ?: throw Exception("TikTok page blocked or challenge required. Try logging in from Settings → Connections → TikTok.")
 
         buildItem(finalUrl, data, itemId)
     }
 
     private fun resolveShortUrl(url: String): String {
-        if (!SHORT_RE.matches(url.trim())) return url
+        val trimmed = url.trim()
+        if (!SHARE_RE.matches(trimmed) && !SHORT_RE.matches(trimmed) &&
+            !MOBILE_RE.matches(trimmed) && !TIKTOKV_RE.matches(trimmed)
+        ) {
+            return trimmed
+        }
         val request = Request.Builder()
-            .url(url)
+            .url(trimmed)
             .header("User-Agent", UA)
             .header("Accept", "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8")
             .header("Accept-Language", "en-US,en;q=0.5")
