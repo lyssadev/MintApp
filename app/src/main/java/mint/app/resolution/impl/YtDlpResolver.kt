@@ -45,7 +45,7 @@ object YtDlpResolver : Resolver {
         }.start()
     }
 
-    override fun supports(url: String): Boolean = true
+    override fun supports(url: String): Boolean = !url.contains("tiktok.com")
 
     override suspend fun resolve(url: String): MediaItem = withContext(Dispatchers.IO) {
         try {
@@ -54,13 +54,6 @@ object YtDlpResolver : Resolver {
                 writeInstagramCookiesFile()?.let { cookiesFile ->
                     request.addOption("--cookies", cookiesFile.absolutePath)
                 }
-                YoutubeDL.getInstance().getInfo(request)
-            } else if (url.contains("tiktok.com")) {
-                val request = YoutubeDLRequest(url)
-                writeTikTokCookiesFile()?.let { cookiesFile ->
-                    request.addOption("--cookies", cookiesFile.absolutePath)
-                }
-                request.addOption("--extractor-args", "tiktok:app_info=musical_ly/35.1.3/2023501030/0")
                 YoutubeDL.getInstance().getInfo(request)
             } else {
                 YoutubeDL.getInstance().getInfo(url)
@@ -201,32 +194,6 @@ object YtDlpResolver : Resolver {
                 val secure = if (name in setOf("sessionid", "csrftoken", "ds_user_id")) "TRUE" else "FALSE"
                 lines += listOf(
                     "#HttpOnly_.instagram.com",
-                    "TRUE",
-                    "/",
-                    secure,
-                    "0",
-                    name,
-                    value,
-                ).joinToString("\t")
-            }
-            file.writeText(lines.joinToString("\n"))
-            file
-        } catch (_: Exception) {
-            null
-        }
-    }
-
-    private fun writeTikTokCookiesFile(): File? {
-        val ctx = appContext ?: return null
-        val cookies = ConnectionPreferences.tiktokCookies(ctx)
-        if (cookies.isEmpty()) return null
-        return try {
-            val file = File(ctx.cacheDir, "tiktok_cookies.txt")
-            val lines = mutableListOf("# Netscape HTTP Cookie File")
-            cookies.forEach { (name, value) ->
-                val secure = if (name == "sid_tt") "TRUE" else "FALSE"
-                lines += listOf(
-                    "#HttpOnly_.tiktok.com",
                     "TRUE",
                     "/",
                     secure,
