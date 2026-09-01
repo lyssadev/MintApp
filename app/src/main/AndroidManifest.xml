@@ -40,12 +40,12 @@
             android:theme="@style/Theme.Mint" />
 
         <service
-            android:name=".data.DownloadService"
+            android:name=".service.DownloadService"
             android:exported="false"
             android:foregroundServiceType="mediaPlayback" />
 
         <receiver
-            android:name=".data.CancelDownloadReceiver"
+            android:name=".service.CancelDownloadReceiver"
             android:exported="false" />
 
     </application>

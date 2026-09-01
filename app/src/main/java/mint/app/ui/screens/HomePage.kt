@@ -56,7 +56,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
-import mint.app.data.DownloadService
+import mint.app.service.DownloadService
 import mint.app.core.model.MediaFormat
 import mint.app.core.model.MediaItem
 import mint.app.resolution.ResolverRegistry

@@ -1,7 +1,6 @@
-package mint.app.data
+package mint.app.service
 
 import android.app.Service
-import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
@@ -102,7 +101,6 @@ class DownloadService : Service() {
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
                 } else if (NotificationHelper.idFor(downloadId) == foregroundId) {
-                    // move foreground to another active download so it keeps a live notification
                     val next = jobs.keys.firstOrNull()
                     if (next != null) {
                         foregroundId = NotificationHelper.idFor(next)
@@ -340,12 +338,5 @@ class DownloadService : Service() {
             }
             context.sendBroadcast(intent)
         }
-    }
-}
-
-class CancelDownloadReceiver : BroadcastReceiver() {
-    override fun onReceive(context: Context, intent: Intent) {
-        val id = intent.getStringExtra(DownloadService.EXTRA_CANCEL_ID)
-        if (id != null) DownloadService.cancel(id)
     }
 }

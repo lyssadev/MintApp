@@ -11,8 +11,8 @@ import androidx.core.app.NotificationCompat
 import mint.app.core.model.DownloadItem
 import mint.app.MainActivity
 import mint.app.R
-import mint.app.data.CancelDownloadReceiver
-import mint.app.data.DownloadService
+import mint.app.service.CancelDownloadReceiver
+import mint.app.service.DownloadService
 
 object NotificationHelper {
 

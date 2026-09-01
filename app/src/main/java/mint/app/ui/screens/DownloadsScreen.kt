@@ -53,7 +53,7 @@ import kotlinx.coroutines.withContext
 import mint.app.core.manager.DownloadManager
 import mint.app.core.model.DownloadItem
 import mint.app.core.model.DownloadStatus
-import mint.app.data.DownloadService
+import mint.app.service.DownloadService
 import mint.app.ui.components.formatBytes
 import mint.app.ui.theme.RobotoMonoMedium
 import java.io.File
