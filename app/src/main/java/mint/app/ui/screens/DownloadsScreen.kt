@@ -50,9 +50,9 @@ import io.github.lyxnx.compose.ui.tablericons.outline.Trash
 import io.github.lyxnx.compose.ui.tablericons.outline.X
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import mint.app.data.DownloadItem
-import mint.app.data.DownloadManager
-import mint.app.data.DownloadStatus
+import mint.app.core.manager.DownloadManager
+import mint.app.core.model.DownloadItem
+import mint.app.core.model.DownloadStatus
 import mint.app.data.DownloadService
 import mint.app.ui.components.formatBytes
 import mint.app.ui.theme.RobotoMonoMedium

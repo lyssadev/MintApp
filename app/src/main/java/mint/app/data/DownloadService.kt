@@ -21,6 +21,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import mint.app.core.manager.DownloadManager
+import mint.app.core.model.DownloadStatus
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap

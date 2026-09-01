@@ -7,6 +7,7 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
+import mint.app.core.model.DownloadItem
 import mint.app.MainActivity
 import mint.app.R
 

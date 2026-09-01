@@ -65,7 +65,7 @@ fun FloatingBottomBar(
     onScreenSelected: (Screen) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    val activeCount by mint.app.data.DownloadManager.activeCount.collectAsState()
+    val activeCount by mint.app.core.manager.DownloadManager.activeCount.collectAsState()
     val selectedIndex = bottomBarItems.indexOfFirst { it.screen == selectedScreen }
     val indicatorOffset by animateDpAsState(
         targetValue = ItemWidth * selectedIndex,
