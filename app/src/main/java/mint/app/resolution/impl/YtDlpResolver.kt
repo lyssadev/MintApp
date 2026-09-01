@@ -6,57 +6,16 @@ import kotlinx.coroutines.withContext
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLException
-import com.yausername.youtubedl_android.YoutubeDLRequest
 import com.yausername.youtubedl_android.mapper.VideoFormat
 import mint.app.core.model.MediaFormat
 import mint.app.core.model.MediaItem
-import mint.app.core.prefs.ConnectionPreferences
 import mint.app.core.util.Logger
 import mint.app.resolution.Resolver
-import java.io.File
 import java.net.URI
 
 object YtDlpResolver : Resolver {
 
     private const val TAG = "YtDlpResolver"
-
-    private val TIKTOK_DOMAINS = listOf(
-        "tiktok.com",
-        "tiktokv.com",
-        "tiktokcdn.com",
-        "tiktokcdn-us.com",
-        "tiktokcdn-eu.com",
-        "tiktokcdn-ap.com",
-        "tiktokcdn-global.com",
-        "tiktokcdn-cn.com",
-        "tiktokcdn-in.com",
-        "tiktokcdn-sg.com",
-        "tiktokcdn-jp.com",
-        "tiktokcdn-kr.com",
-        "tiktokcdn-de.com",
-        "tiktokcdn-fr.com",
-        "tiktokcdn-br.com",
-        "tiktokcdn-mx.com",
-        "tiktokmusic.app",
-        "tiktok-live.com",
-        "tiktoklive.com",
-        "tiktokapi.com",
-        "tiktokclaim.eu",
-        "tiktokclaim.org",
-        "tiktokpangle.us",
-        "musical.ly",
-        "douyin.com",
-        "douyinvod.com",
-        "douyincdn.com",
-        "douyinpic.com",
-        "douyinvideo.com",
-        "bytedance.com",
-        "bytecdn.com",
-        "byteimg.com",
-        "bytetos.com",
-        "ibytedtos.com",
-        "byteoversea.com",
-    )
 
     private var initialized = false
     private var appContext: Context? = null
@@ -95,23 +54,18 @@ object YtDlpResolver : Resolver {
 
     override fun supports(url: String): Boolean {
         val host = runCatching { URI(url).host?.lowercase() }.getOrNull() ?: return false
-        val supported = TIKTOK_DOMAINS.none { suffix -> host == suffix || host.endsWith(".$suffix") }
-        return supported
+        return when {
+            host == "youtu.be" -> true
+            host == "youtube-nocookie.com" -> true
+            host.endsWith("youtube.com") -> true
+            else -> false
+        }
     }
 
     override suspend fun resolve(url: String): MediaItem = withContext(Dispatchers.IO) {
         try {
             Logger.d(TAG, "resolve: url=$url")
-            val info = if (url.contains("instagram.com")) {
-                val request = YoutubeDLRequest(url)
-                writeInstagramCookiesFile()?.let { cookiesFile ->
-                    request.addOption("--cookies", cookiesFile.absolutePath)
-                    Logger.d(TAG, "resolve: using instagram cookies file")
-                }
-                YoutubeDL.getInstance().getInfo(request)
-            } else {
-                YoutubeDL.getInstance().getInfo(url)
-            }
+            val info = YoutubeDL.getInstance().getInfo(url)
             val formats = info.formats ?: emptyList()
             Logger.d(TAG, "resolve: title=${info.title} formats=${formats.size} duration=${info.duration}")
 
@@ -244,32 +198,6 @@ object YtDlpResolver : Resolver {
         } catch (e: Exception) {
             Logger.w(TAG, "resolve: unexpected error", e)
             throw e
-        }
-    }
-
-    private fun writeInstagramCookiesFile(): File? {
-        val ctx = appContext ?: return null
-        val cookies = ConnectionPreferences.instagramCookies(ctx)
-        if (cookies.isEmpty()) return null
-        return try {
-            val file = File(ctx.cacheDir, "instagram_cookies.txt")
-            val lines = mutableListOf("# Netscape HTTP Cookie File")
-            cookies.forEach { (name, value) ->
-                val secure = if (name in setOf("sessionid", "csrftoken", "ds_user_id")) "TRUE" else "FALSE"
-                lines += listOf(
-                    "#HttpOnly_.instagram.com",
-                    "TRUE",
-                    "/",
-                    secure,
-                    "0",
-                    name,
-                    value,
-                ).joinToString("\t")
-            }
-            file.writeText(lines.joinToString("\n"))
-            file
-        } catch (_: Exception) {
-            null
         }
     }
 
