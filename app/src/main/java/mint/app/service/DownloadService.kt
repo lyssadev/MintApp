@@ -335,11 +335,23 @@ class DownloadService : Service() {
     }
 
     private fun buildBaseName(title: String): String {
-        return title
-            .replace(Regex("[\\\\/:*?\"<>|]"), "_")
-            .trim()
-            .take(80)
-            .ifBlank { "download" }
+        var result = title.replace(Regex("[\\\\/:*?\"<>|]"), "_")
+        if (result.codePointCount(0, result.length) > 80) {
+            val end = result.offsetByCodePoints(0, 80)
+            result = result.substring(0, end)
+        }
+        val clean = StringBuilder(result.length)
+        var i = 0
+        while (i < result.length) {
+            val cp = result.codePointAt(i)
+            if (cp in 0xD800..0xDFFF) {
+                i++
+                continue
+            }
+            clean.appendCodePoint(cp)
+            i += Character.charCount(cp)
+        }
+        return clean.toString().trim().ifBlank { "download" }
     }
 
     private fun mimeFor(format: String): String = when (format.lowercase()) {
