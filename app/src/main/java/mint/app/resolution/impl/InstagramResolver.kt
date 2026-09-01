@@ -6,6 +6,7 @@ import kotlinx.coroutines.withContext
 import mint.app.core.model.MediaFormat
 import mint.app.core.model.MediaItem
 import mint.app.core.prefs.ConnectionPreferences
+import mint.app.core.util.Logger
 import mint.app.resolution.LoginRequiredException
 import mint.app.resolution.Resolver
 import okhttp3.Cookie
@@ -19,6 +20,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 object InstagramResolver : Resolver {
+
+    private const val TAG = "InstagramResolver"
 
     private const val APP_ID = "936619743392459"
     private const val ENCODING_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
@@ -90,23 +93,28 @@ object InstagramResolver : Resolver {
         url.contains("instagram.com") && SHORTCODE_RE.containsMatchIn(url)
 
     override suspend fun resolve(url: String): MediaItem = withContext(Dispatchers.IO) {
+        Logger.d(TAG, "resolve: url=$url")
         val shortcode = SHORTCODE_RE.find(url)?.groupValues?.get(1)
             ?: throw Exception("Could not extract Instagram shortcode")
+        Logger.d(TAG, "resolve: shortcode=$shortcode")
 
         val product = restMedia(shortcode)
         if (product == null) {
+            Logger.w(TAG, "resolve: media info request failed for $shortcode")
             val hasSession = appContext?.let { ConnectionPreferences.isInstagramLinked(it) } == true
             if (!hasSession) throw LoginRequiredException(
                 "Instagram login required. Open Settings → Connections to link your account.",
             )
             throw Exception("Instagram post is not accessible without login")
         }
+        Logger.d(TAG, "resolve: media info received for $shortcode")
         buildItem(url, product)
     }
 
     private fun restMedia(shortcode: String): JSONObject? {
         return try {
             val mediaId = shortcodeToPk(shortcode).toString()
+            Logger.d(TAG, "restMedia: mediaId=$mediaId")
             val csrfToken = generateCsrf()
             cookies.getOrPut("www.instagram.com") { mutableListOf() }
                 .add(Cookie.Builder()
@@ -134,11 +142,17 @@ object InstagramResolver : Resolver {
                 .build()
             client.newCall(request).execute().use { resp ->
                 val text = resp.body?.string() ?: return null
-                if (!resp.isSuccessful) return null
+                if (!resp.isSuccessful) {
+                    Logger.w(TAG, "restMedia: HTTP ${resp.code} for media $mediaId")
+                    return null
+                }
                 val json = runCatching { JSONObject(text) }.getOrNull() ?: return null
-                json.optJSONArray("items")?.optJSONObject(0)
+                val item = json.optJSONArray("items")?.optJSONObject(0)
+                if (item == null) Logger.w(TAG, "restMedia: no items in response for $mediaId")
+                item
             }
-        } catch (_: Exception) {
+        } catch (e: Exception) {
+            Logger.w(TAG, "restMedia: exception for shortcode=$shortcode", e)
             null
         }
     }
@@ -161,6 +175,7 @@ object InstagramResolver : Resolver {
         val videos = options.filter { it.format == "mp4" }
         val images = options.filter { it.format != "mp4" }
         val isMusicOnly = videos.isEmpty() && images.isEmpty()
+        Logger.d(TAG, "buildItem: ${videos.size} videos, ${images.size} images")
 
         return MediaItem(
             originalUrl = url,

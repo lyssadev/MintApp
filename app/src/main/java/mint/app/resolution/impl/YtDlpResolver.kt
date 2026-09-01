@@ -11,11 +11,14 @@ import com.yausername.youtubedl_android.mapper.VideoFormat
 import mint.app.core.model.MediaFormat
 import mint.app.core.model.MediaItem
 import mint.app.core.prefs.ConnectionPreferences
+import mint.app.core.util.Logger
 import mint.app.resolution.Resolver
 import java.io.File
 import java.net.URI
 
 object YtDlpResolver : Resolver {
+
+    private const val TAG = "YtDlpResolver"
 
     private val TIKTOK_DOMAINS = listOf(
         "tiktok.com",
@@ -65,8 +68,11 @@ object YtDlpResolver : Resolver {
             YoutubeDL.getInstance().init(appContext!!)
             FFmpeg.getInstance().init(appContext!!)
             initialized = true
+            Logger.d(TAG, "initialize: yt-dlp ready")
             maybeUpdateInBackground()
-        } catch (_: Exception) { }
+        } catch (e: Exception) {
+            Logger.w(TAG, "initialize: failed", e)
+        }
     }
 
     private fun maybeUpdateInBackground() {
@@ -77,30 +83,37 @@ object YtDlpResolver : Resolver {
                 val last = prefs.getLong("last_update", 0L)
                 val weekMs = 7L * 24 * 60 * 60 * 1000
                 if (System.currentTimeMillis() - last >= weekMs) {
+                    Logger.d(TAG, "maybeUpdateInBackground: updating yt-dlp")
                     YoutubeDL.getInstance().updateYoutubeDL(ctx, YoutubeDL.UpdateChannel.STABLE)
                     prefs.edit().putLong("last_update", System.currentTimeMillis()).apply()
                 }
-            } catch (_: Exception) { }
+            } catch (e: Exception) {
+                Logger.w(TAG, "maybeUpdateInBackground: update failed", e)
+            }
         }.start()
     }
 
     override fun supports(url: String): Boolean {
         val host = runCatching { URI(url).host?.lowercase() }.getOrNull() ?: return false
-        return TIKTOK_DOMAINS.none { suffix -> host == suffix || host.endsWith(".$suffix") }
+        val supported = TIKTOK_DOMAINS.none { suffix -> host == suffix || host.endsWith(".$suffix") }
+        return supported
     }
 
     override suspend fun resolve(url: String): MediaItem = withContext(Dispatchers.IO) {
         try {
+            Logger.d(TAG, "resolve: url=$url")
             val info = if (url.contains("instagram.com")) {
                 val request = YoutubeDLRequest(url)
                 writeInstagramCookiesFile()?.let { cookiesFile ->
                     request.addOption("--cookies", cookiesFile.absolutePath)
+                    Logger.d(TAG, "resolve: using instagram cookies file")
                 }
                 YoutubeDL.getInstance().getInfo(request)
             } else {
                 YoutubeDL.getInstance().getInfo(url)
             }
             val formats = info.formats ?: emptyList()
+            Logger.d(TAG, "resolve: title=${info.title} formats=${formats.size} duration=${info.duration}")
 
             val videoFormats = formats.filter { f ->
                 val vc = f.vcodec ?: "none"
@@ -204,6 +217,10 @@ object YtDlpResolver : Resolver {
                 listOfNotNull(videoOptions.firstOrNull { it.hasAudio } ?: videoOptions.firstOrNull())
             }
 
+            Logger.d(
+                TAG,
+                "resolve: done platform=$platform video=${finalVideoOptions.size} audio=${audioOptions.size} image=${imageOptions.size}",
+            )
             MediaItem(
                 originalUrl = url,
                 title = info.title ?: "Unknown",
@@ -219,9 +236,14 @@ object YtDlpResolver : Resolver {
                 gifOptions = gifOptions,
             )
         } catch (e: YoutubeDLException) {
+            Logger.w(TAG, "resolve: yt-dlp error: ${e.message}", e)
             throw Exception("yt-dlp error: ${e.message}", e)
         } catch (e: InterruptedException) {
+            Logger.w(TAG, "resolve: request interrupted", e)
             throw Exception("Request cancelled", e)
+        } catch (e: Exception) {
+            Logger.w(TAG, "resolve: unexpected error", e)
+            throw e
         }
     }
 

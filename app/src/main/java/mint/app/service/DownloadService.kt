@@ -9,7 +9,6 @@ import android.os.IBinder
 import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
-import android.util.Log
 import androidx.core.content.ContextCompat
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
@@ -24,6 +23,7 @@ import mint.app.core.manager.DownloadManager
 import mint.app.core.model.DownloadStatus
 import mint.app.core.notify.NotificationHelper
 import mint.app.core.storage.FileSaver
+import mint.app.core.util.Logger
 import java.io.File
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
@@ -84,21 +84,22 @@ class DownloadService : Service() {
 
         val job = scope.launch {
             try {
+                Logger.d(TAG, "start: $downloadId url=$originalUrl format=$formatId title=$title direct=${imageUrl != null}")
                 download(
                     downloadId, originalUrl, formatId, title, format,
                     estimatedSize, hasAudio, thumbnailUrl, imageUrl, httpHeaders,
                 )
             } catch (e: YoutubeDL.CanceledException) {
-                Log.d(TAG, "download cancelled: $downloadId")
+                Logger.d(TAG, "start: download cancelled $downloadId", e)
                 NotificationHelper.dismiss(this@DownloadService, downloadId)
                 DownloadManager.cancel(downloadId)
             } catch (e: InterruptedException) {
-                Log.d(TAG, "download interrupted: $downloadId")
+                Logger.d(TAG, "start: download interrupted $downloadId", e)
                 NotificationHelper.dismiss(this@DownloadService, downloadId)
                 DownloadManager.cancel(downloadId)
             } catch (e: Exception) {
                 processIds.remove(downloadId)?.let { YoutubeDL.getInstance().destroyProcessById(it) }
-                Log.e(TAG, "download failed: $downloadId ${e.message}")
+                Logger.e(TAG, "start: download failed $downloadId: ${e.message}", e)
                 DownloadManager.fail(downloadId, extractError(e.message))
             } finally {
                 jobs.remove(downloadId)
@@ -153,6 +154,7 @@ class DownloadService : Service() {
 
         try {
             if (imageUrl != null) {
+                Logger.d(TAG, "download: direct url=$imageUrl headers=${httpHeaders.size}")
                 val ext = safeExtension(imageUrl, format)
                 val imgFile = File(tempDir, "$tempBase.$ext")
                 val url = java.net.URL(imageUrl)
@@ -208,6 +210,7 @@ class DownloadService : Service() {
                     }
                 }
                 actualFile = imgFile
+                Logger.d(TAG, "download: direct download done bytes=${imgFile.length()} total=$total")
             } else if (originalUrl.contains("tiktok.com") || originalUrl.contains("tiktokv.com")) {
                 throw Exception("TikTok video URL missing from resolved data")
             } else {
@@ -267,12 +270,13 @@ class DownloadService : Service() {
                         }
                         lastBytes = downloaded
                         lastTime = now
-                        Log.d(TAG, "progress[$downloadId]: $percent% | eta: ${eta}s")
+                        Logger.d(TAG, "progress[$downloadId]: $percent% | eta: ${eta}s")
                         DownloadManager.updateProgress(downloadId, percent, downloaded, estimatedSize, speed)
                         NotificationHelper.updateProgress(this@DownloadService, downloadId, percent, title, thumbnailUrl)
                     }
                 }
 
+                Logger.d(TAG, "download: yt-dlp formatSelector='$formatSelector'")
                 YoutubeDL.getInstance().execute(request, processId, callback)
 
                 val dest = destFile?.let { File(it) }?.takeIf { it.isFile }
@@ -282,6 +286,7 @@ class DownloadService : Service() {
                     ?.maxByOrNull { it.lastModified() }
                 actualFile = dest ?: fallback
                     ?: throw Exception("downloaded file not found")
+                Logger.d(TAG, "download: yt-dlp done file=${actualFile.name} size=${actualFile.length()}")
             }
 
             val rawExt = actualFile.name.substringAfterLast('.', "").ifBlank { format }
@@ -299,6 +304,7 @@ class DownloadService : Service() {
                     }
                 }
             } catch (e: Exception) {
+                Logger.e(TAG, "download: file copy error for $downloadId", e)
                 target.uri?.let { uri ->
                     runCatching { contentResolver.delete(uri, null, null) }
                 }
@@ -308,6 +314,7 @@ class DownloadService : Service() {
             actualFile.delete()
 
             DownloadManager.complete(downloadId, finalName, target.displayPath, target.uri?.toString(), finalMime, sizeBytes)
+            Logger.d(TAG, "download: completed $downloadId name=$finalName size=$sizeBytes")
             vibrate()
             NotificationHelper.dismiss(this@DownloadService, downloadId)
             val completed = DownloadManager.items.value.filter { it.status == DownloadStatus.COMPLETED }

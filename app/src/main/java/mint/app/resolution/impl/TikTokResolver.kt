@@ -6,6 +6,7 @@ import kotlinx.coroutines.withContext
 import mint.app.core.model.MediaFormat
 import mint.app.core.model.MediaItem
 import mint.app.core.prefs.ConnectionPreferences
+import mint.app.core.util.Logger
 import mint.app.resolution.Resolver
 import okhttp3.Cookie
 import okhttp3.CookieJar
@@ -17,6 +18,8 @@ import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.TimeUnit
 
 object TikTokResolver : Resolver {
+
+    private const val TAG = "TikTokResolver"
 
     private const val UA = "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36"
 
@@ -57,17 +60,23 @@ object TikTokResolver : Resolver {
     }
 
     override suspend fun resolve(url: String): MediaItem = withContext(Dispatchers.IO) {
+        Logger.d(TAG, "resolve: url=$url")
         jar.clear()
         val finalUrl = resolveShortUrl(url)
+        Logger.d(TAG, "resolve: finalUrl=$finalUrl")
         if (VIDEO_RE.find(finalUrl) == null && PHOTO_RE.find(finalUrl) == null && ID_RE.find(finalUrl) == null) {
+            Logger.w(TAG, "resolve: no video/photo pattern matched in $finalUrl")
             throw Exception("Could not extract TikTok video/photo ID from URL: $finalUrl")
         }
 
         val html = fetchPage(finalUrl)
+        Logger.d(TAG, "resolve: html length=${html.length}")
         val data = extractUniversalData(html)
         if (data == null) {
+            Logger.w(TAG, "resolve: data extraction failed, page may be blocked")
             throw Exception("TikTok page blocked or challenge required. Try logging in from Settings → Connections → TikTok.")
         }
+        Logger.d(TAG, "resolve: data extracted successfully, keys=${data.keys().asSequence().toList()}")
 
         buildItem(finalUrl, data)
     }
@@ -79,6 +88,7 @@ object TikTokResolver : Resolver {
         ) {
             return trimmed
         }
+        Logger.d(TAG, "resolveShortUrl: following redirects for $trimmed")
         val request = Request.Builder()
             .url(trimmed)
             .header("User-Agent", UA)
@@ -86,11 +96,14 @@ object TikTokResolver : Resolver {
             .header("Accept-Language", "en-US,en;q=0.5")
             .build()
         return client.newCall(request).execute().use { resp ->
-            resp.request.url.toString()
+            val resolved = resp.request.url.toString()
+            Logger.d(TAG, "resolveShortUrl: status=${resp.code} resolved=$resolved")
+            resolved
         }
     }
 
     private fun fetchPage(url: String): String {
+        Logger.d(TAG, "fetchPage: url=$url")
         val request = Request.Builder()
             .url(url)
             .header("User-Agent", UA)
@@ -102,6 +115,7 @@ object TikTokResolver : Resolver {
             .header("Upgrade-Insecure-Requests", "1")
             .build()
         return client.newCall(request).execute().use { resp ->
+            Logger.d(TAG, "fetchPage: status=${resp.code} contentType=${resp.header("Content-Type")}")
             if (!resp.isSuccessful) throw Exception("Failed to fetch TikTok page: ${resp.code}")
             resp.body?.string() ?: throw Exception("Empty response from TikTok")
         }
@@ -109,6 +123,7 @@ object TikTokResolver : Resolver {
 
     private fun extractUniversalData(html: String): JSONObject? {
         if (html.contains("Please wait") || html.contains("_wafchallengeid")) {
+            Logger.w(TAG, "extractUniversalData: WAF challenge detected (Please wait / _wafchallengeid)")
             return null
         }
         val regex = Regex(
@@ -116,9 +131,15 @@ object TikTokResolver : Resolver {
             RegexOption.DOT_MATCHES_ALL,
         )
         val match = regex.find(html)
-        if (match == null) return null
+        if (match == null) {
+            Logger.w(TAG, "extractUniversalData: __UNIVERSAL_DATA_FOR_REHYDRATION__ script tag not found")
+            return null
+        }
         val raw = match.groupValues[1]
-        return runCatching { JSONObject(raw) }.getOrNull()
+        return runCatching { JSONObject(raw) }
+            .onSuccess { Logger.d(TAG, "extractUniversalData: parsed JSON, keys=${it.length()}") }
+            .onFailure { Logger.w(TAG, "extractUniversalData: failed to parse JSON: ${it.message}") }
+            .getOrNull()
     }
 
     private fun buildCookieHeader(): String {
@@ -135,18 +156,23 @@ object TikTokResolver : Resolver {
     private fun buildItem(url: String, data: JSONObject): MediaItem {
         val scope = data.optJSONObject("__DEFAULT_SCOPE__")
         if (scope == null) {
+            Logger.w(TAG, "buildItem: no __DEFAULT_SCOPE__; top keys=${data.keys().asSequence().toList()}")
             throw Exception("No scope in TikTok data")
         }
         val videoDetail = scope.optJSONObject("webapp.video-detail")
             ?: scope.optJSONObject("webapp.reflow.video.detail")
         if (videoDetail == null) {
+            Logger.w(TAG, "buildItem: no video detail; scope keys=${scope.keys().asSequence().toList()}")
             throw Exception("No video detail in TikTok data")
         }
         val itemStruct = videoDetail.optJSONObject("itemInfo")?.optJSONObject("itemStruct")
             ?: videoDetail.optJSONObject("itemStruct")
         if (itemStruct == null) {
+            Logger.w(TAG, "buildItem: no itemStruct; video-detail keys=${videoDetail.keys().asSequence().toList()}")
             throw Exception("No item struct in TikTok data")
         }
+        Logger.d(TAG, "buildItem: itemStruct keys=${itemStruct.keys().asSequence().toList()}")
+        val isImage = itemStruct.optJSONObject("imagePost") != null
 
         val desc = itemStruct.optString("desc", "TikTok post").take(120)
         val author = itemStruct.optJSONObject("author")?.optString("uniqueId") ?: "tiktok"
@@ -171,6 +197,7 @@ object TikTokResolver : Resolver {
                 )
             }
             if (imageOptions.isEmpty()) throw Exception("No images found in TikTok photo post")
+            Logger.d(TAG, "buildItem: image post, ${imageOptions.size} images")
             return MediaItem(
                 originalUrl = url,
                 title = desc,
@@ -212,10 +239,12 @@ object TikTokResolver : Resolver {
         }
         val videoUrl = videoUrls.firstOrNull()
             ?: throw Exception("No video URL found in TikTok post")
+        Logger.d(TAG, "buildItem: videoUrl=$videoUrl")
 
         val duration = video.optInt("duration", 0)
         val height = video.optInt("height", 0)
         val label = if (height > 0) "${height}p · mp4" else "Video · mp4"
+        Logger.d(TAG, "buildItem: video height=${height}p duration=${duration}s cookie=${cookieHeader.isNotBlank()}")
 
         return MediaItem(
             originalUrl = url,
