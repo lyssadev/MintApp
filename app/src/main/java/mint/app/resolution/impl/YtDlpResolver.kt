@@ -13,8 +13,47 @@ import mint.app.core.model.MediaItem
 import mint.app.core.prefs.ConnectionPreferences
 import mint.app.resolution.Resolver
 import java.io.File
+import java.net.URI
 
 object YtDlpResolver : Resolver {
+
+    private val TIKTOK_DOMAINS = listOf(
+        "tiktok.com",
+        "tiktokv.com",
+        "tiktokcdn.com",
+        "tiktokcdn-us.com",
+        "tiktokcdn-eu.com",
+        "tiktokcdn-ap.com",
+        "tiktokcdn-global.com",
+        "tiktokcdn-cn.com",
+        "tiktokcdn-in.com",
+        "tiktokcdn-sg.com",
+        "tiktokcdn-jp.com",
+        "tiktokcdn-kr.com",
+        "tiktokcdn-de.com",
+        "tiktokcdn-fr.com",
+        "tiktokcdn-br.com",
+        "tiktokcdn-mx.com",
+        "tiktokmusic.app",
+        "tiktok-live.com",
+        "tiktoklive.com",
+        "tiktokapi.com",
+        "tiktokclaim.eu",
+        "tiktokclaim.org",
+        "tiktokpangle.us",
+        "musical.ly",
+        "douyin.com",
+        "douyinvod.com",
+        "douyincdn.com",
+        "douyinpic.com",
+        "douyinvideo.com",
+        "bytedance.com",
+        "bytecdn.com",
+        "byteimg.com",
+        "bytetos.com",
+        "ibytedtos.com",
+        "byteoversea.com",
+    )
 
     private var initialized = false
     private var appContext: Context? = null
@@ -45,7 +84,10 @@ object YtDlpResolver : Resolver {
         }.start()
     }
 
-    override fun supports(url: String): Boolean = !url.contains("tiktok.com") && !url.contains("tiktokv.com")
+    override fun supports(url: String): Boolean {
+        val host = runCatching { URI(url).host?.lowercase() }.getOrNull() ?: return false
+        return TIKTOK_DOMAINS.none { suffix -> host == suffix || host.endsWith(".$suffix") }
+    }
 
     override suspend fun resolve(url: String): MediaItem = withContext(Dispatchers.IO) {
         try {
