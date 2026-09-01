@@ -3,12 +3,13 @@ package mint.app.resolution
 import android.content.Context
 import mint.app.core.model.MediaItem
 import mint.app.resolution.impl.InstagramResolver
+import mint.app.resolution.impl.TikTokResolver
 import mint.app.resolution.impl.YtDlpResolver
 import java.net.URI
 
 object ResolverRegistry {
 
-    private val resolvers: List<Resolver> = listOf(InstagramResolver, YtDlpResolver)
+    private val resolvers: List<Resolver> = listOf(InstagramResolver, TikTokResolver, YtDlpResolver)
 
     fun init(context: Context) {
         resolvers.forEach { resolver -> resolver.initialize(context) }
