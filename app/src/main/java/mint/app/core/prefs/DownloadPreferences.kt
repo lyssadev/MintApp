@@ -1,4 +1,4 @@
-package mint.app.data
+package mint.app.core.prefs
 
 import android.content.Context
 import android.content.SharedPreferences

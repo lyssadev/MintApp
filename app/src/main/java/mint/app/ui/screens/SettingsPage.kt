@@ -61,7 +61,7 @@ import io.github.lyxnx.compose.ui.tablericons.outline.Star
 import io.github.lyxnx.compose.ui.tablericons.outline.X
 import mint.app.BuildConfig
 import mint.app.R
-import mint.app.data.DownloadPreferences
+import mint.app.core.prefs.DownloadPreferences
 import mint.app.ui.theme.ThemeController
 import mint.app.ui.theme.ThemeMode
 import mint.app.ui.theme.ThemePreset

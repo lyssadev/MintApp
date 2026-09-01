@@ -65,7 +65,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import mint.app.data.DownloadPreferences
+import mint.app.core.prefs.DownloadPreferences
 import mint.app.ui.theme.RobotoMonoMedium
 import mint.app.ui.theme.ThemeController
 import mint.app.ui.theme.applyThemeAwareEdgeToEdge

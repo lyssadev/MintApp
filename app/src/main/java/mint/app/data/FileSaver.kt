@@ -6,6 +6,7 @@ import android.net.Uri
 import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
+import mint.app.core.prefs.DownloadPreferences
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
