@@ -12,6 +12,7 @@ data class MediaItem(
     val videoOptions: List<MediaFormat>,
     val audioOptions: List<MediaFormat>,
     val imageOptions: List<MediaFormat> = emptyList(),
+    val gifOptions: List<MediaFormat> = emptyList(),
 )
 
 data class MediaFormat(

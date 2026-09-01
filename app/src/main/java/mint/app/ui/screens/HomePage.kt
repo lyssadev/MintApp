@@ -211,12 +211,13 @@ fun HomePage(modifier: Modifier = Modifier) {
                 }
                 is ResolveState.Success -> {
                     val info = current.info
+                    val allItems = info.imageOptions + info.gifOptions + info.videoOptions
                     when {
-                        info.imageOptions.isNotEmpty() -> ImageOptionsSection(
+                        allItems.size > 1 && info.platform != "youtube" -> MediaOptionsSection(
                             info = info,
-                            onDownloadImage = { option -> startDownload(option) },
+                            onDownloadItem = { option -> startDownload(option) },
                             onDownloadAll = {
-                                info.imageOptions.forEach { startDownload(it) }
+                                allItems.forEach { startDownload(it) }
                             },
                         )
                         info.platform == "youtube" -> StreamInfoCard(
@@ -282,11 +283,12 @@ private fun ShimmerTitle() {
 }
 
 @Composable
-private fun ImageOptionsSection(
+private fun MediaOptionsSection(
     info: MediaItem,
-    onDownloadImage: (MediaFormat) -> Unit,
+    onDownloadItem: (MediaFormat) -> Unit,
     onDownloadAll: () -> Unit,
 ) {
+    val allItems = info.imageOptions + info.gifOptions + info.videoOptions
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
@@ -301,14 +303,14 @@ private fun ImageOptionsSection(
                 overflow = TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f),
             )
-            if (info.imageOptions.size > 1) {
+            if (allItems.size > 1) {
                 Surface(
                     onClick = onDownloadAll,
                     shape = RoundedCornerShape(10.dp),
                     color = MaterialTheme.colorScheme.primaryContainer,
                 ) {
                     Text(
-                        text = "Download all (${info.imageOptions.size})",
+                        text = "Download all (${allItems.size})",
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -316,7 +318,7 @@ private fun ImageOptionsSection(
                 }
             }
         }
-        info.imageOptions.forEach { option ->
+        allItems.forEach { option ->
             Surface(
                 shape = RoundedCornerShape(16.dp),
                 color = MaterialTheme.colorScheme.surfaceContainer,
@@ -328,7 +330,11 @@ private fun ImageOptionsSection(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     AsyncImage(
-                        model = option.url,
+                        model = if (option in info.imageOptions || option in info.gifOptions) {
+                            option.url
+                        } else {
+                            info.thumbnailUrl
+                        },
                         contentDescription = null,
                         contentScale = ContentScale.Crop,
                         modifier = Modifier
@@ -350,7 +356,7 @@ private fun ImageOptionsSection(
                         }
                     }
                     Surface(
-                        onClick = { onDownloadImage(option) },
+                        onClick = { onDownloadItem(option) },
                         shape = RoundedCornerShape(10.dp),
                         color = MaterialTheme.colorScheme.primaryContainer,
                     ) {

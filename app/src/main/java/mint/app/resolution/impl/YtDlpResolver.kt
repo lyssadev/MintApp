@@ -63,6 +63,12 @@ object YtDlpResolver : Resolver {
                 val ac = f.acodec ?: "none"
                 vc == "none" && ac == "none" && (f.width ?: 0) > 0
             }
+            val gifFormats = formats.filter { f ->
+                val vc = f.vcodec ?: "none"
+                val ac = f.acodec ?: "none"
+                val ext = f.ext?.lowercase()
+                (ext == "gif" || ext == "webp") && vc != "none" && (f.width ?: 0) > 0
+            }
 
             val isMusicOnly = videoFormats.isEmpty()
             val durationSec = (info.duration ?: 0).toLong()
@@ -118,11 +124,38 @@ object YtDlpResolver : Resolver {
                     )
                 }
 
+            val gifOptions = gifFormats
+                .mapIndexed { index, format ->
+                    MediaFormat(
+                        label = "GIF ${index + 1} · ${format.ext ?: "gif"}",
+                        format = format.ext ?: "gif",
+                        formatId = format.formatId ?: "",
+                        url = format.url ?: "",
+                        estimatedSizeBytes = estimateSize(format, durationSec),
+                        hasAudio = false,
+                        httpHeaders = format.httpHeaders ?: emptyMap(),
+                    )
+                }
+
             val platform = when {
                 url.contains("youtube.com") || url.contains("youtu.be") || url.contains("youtube-nocookie.com") -> "youtube"
                 url.contains("instagram.com") -> "instagram"
                 url.contains("tiktok.com") -> "tiktok"
                 else -> "other"
+            }
+
+            // For non-YouTube, detect bulk videos (multiple distinct URLs) and label as "Video N"
+            val finalVideoOptions = if (platform == "youtube") {
+                videoOptions
+            } else {
+                val distinct = videoOptions.distinctBy { it.url }
+                if (distinct.size <= 1) {
+                    videoOptions
+                } else {
+                    distinct.mapIndexed { index, opt ->
+                        opt.copy(label = "Video ${index + 1} · ${opt.format}")
+                    }
+                }
             }
 
             MediaItem(
@@ -134,9 +167,10 @@ object YtDlpResolver : Resolver {
                 isMusicOnly = isMusicOnly,
                 streamType = if (isMusicOnly) "AUDIO" else "VIDEO",
                 platform = platform,
-                videoOptions = videoOptions,
+                videoOptions = finalVideoOptions,
                 audioOptions = audioOptions,
                 imageOptions = imageOptions,
+                gifOptions = gifOptions,
             )
         } catch (e: YoutubeDLException) {
             throw Exception("yt-dlp error: ${e.message}", e)
