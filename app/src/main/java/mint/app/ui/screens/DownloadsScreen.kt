@@ -3,6 +3,7 @@ package mint.app.ui.screens
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -49,10 +50,9 @@ import io.github.lyxnx.compose.ui.tablericons.outline.Trash
 import io.github.lyxnx.compose.ui.tablericons.outline.X
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import mint.app.data.DownloadEntry
-import mint.app.data.DownloadHistory
+import mint.app.data.DownloadItem
 import mint.app.data.DownloadManager
-import mint.app.data.DownloadPhase
+import mint.app.data.DownloadStatus
 import mint.app.data.DownloadService
 import mint.app.ui.components.formatBytes
 import mint.app.ui.theme.RobotoMonoMedium
@@ -64,11 +64,14 @@ import java.util.Locale
 @Composable
 fun DownloadsScreen(modifier: Modifier = Modifier) {
     val context = LocalContext.current
-    val downloadState by DownloadManager.state.collectAsState()
-    val history by DownloadHistory.entries.collectAsState()
-    var pendingDelete by remember { mutableStateOf<DownloadEntry?>(null) }
+    val items by DownloadManager.items.collectAsState()
+    var pendingDelete by remember { mutableStateOf<DownloadItem?>(null) }
 
-    LaunchedEffect(Unit) { DownloadHistory.load(context) }
+    LaunchedEffect(Unit) { DownloadManager.load(context) }
+
+    val activeItems = items.filter { it.isActive }
+    val completedItems = items.filter { it.status == DownloadStatus.COMPLETED }
+    val failedItems = items.filter { it.status == DownloadStatus.FAILED }
 
     Column(
         modifier = modifier
@@ -90,29 +93,42 @@ fun DownloadsScreen(modifier: Modifier = Modifier) {
         )
         Spacer(modifier = Modifier.height(28.dp))
 
-        if (downloadState.isDownloading) {
+        if (activeItems.isNotEmpty()) {
             SectionHeader("In progress")
             Spacer(modifier = Modifier.height(12.dp))
-            InProgressDownloadCard(
-                state = downloadState,
-                onCancel = { DownloadService.cancelActive() },
-            )
+            activeItems.forEach { item ->
+                ActiveDownloadCard(item = item)
+                Spacer(modifier = Modifier.height(12.dp))
+            }
+            Spacer(modifier = Modifier.height(24.dp))
+        }
+
+        if (failedItems.isNotEmpty()) {
+            SectionHeader("Failed")
+            Spacer(modifier = Modifier.height(12.dp))
+            failedItems.forEach { item ->
+                FailedDownloadCard(
+                    item = item,
+                    onDelete = { pendingDelete = item },
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+            }
             Spacer(modifier = Modifier.height(24.dp))
         }
 
         SectionHeader("Completed")
         Spacer(modifier = Modifier.height(12.dp))
-        if (history.isEmpty()) {
+        if (completedItems.isEmpty()) {
             Text(
                 text = "No downloads yet",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            history.forEach { entry ->
+            completedItems.forEach { item ->
                 CompletedDownloadCard(
-                    entry = entry,
-                    onDelete = { pendingDelete = entry },
+                    item = item,
+                    onDelete = { pendingDelete = item },
                 )
                 Spacer(modifier = Modifier.height(12.dp))
             }
@@ -120,14 +136,14 @@ fun DownloadsScreen(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(120.dp))
     }
 
-    pendingDelete?.let { entry ->
+    pendingDelete?.let { item ->
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
             title = { Text("Delete download?") },
-            text = { Text("\"${entry.fileName}\" will be permanently removed from your device.") },
+            text = { Text("\"${item.fileName}\" will be permanently removed from your device.") },
             confirmButton = {
                 TextButton(onClick = {
-                    deleteEntry(context, entry)
+                    deleteEntry(context, item)
                     pendingDelete = null
                 }) {
                     Text("Delete", color = MaterialTheme.colorScheme.error)
@@ -173,12 +189,10 @@ private fun Thumbnail(url: String?, modifier: Modifier = Modifier) {
 }
 
 @Composable
-private fun InProgressDownloadCard(
-    state: mint.app.data.DownloadUiState,
-    onCancel: () -> Unit,
-) {
-    val smoothProgress by androidx.compose.animation.core.animateFloatAsState(
-        targetValue = state.progress / 100f,
+private fun ActiveDownloadCard(item: DownloadItem) {
+    val context = LocalContext.current
+    val smoothProgress by animateFloatAsState(
+        targetValue = item.progress / 100f,
         label = "downloadProgress",
     )
 
@@ -193,7 +207,7 @@ private fun InProgressDownloadCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Thumbnail(
-                url = state.thumbnailUrl,
+                url = item.thumbnailUrl,
                 modifier = Modifier
                     .width(96.dp)
                     .height(56.dp),
@@ -203,23 +217,24 @@ private fun InProgressDownloadCard(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = state.title,
+                    text = item.title,
                     style = MaterialTheme.typography.titleSmall,
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
                 Text(
-                    text = when (state.phase) {
-                        DownloadPhase.PREPARING -> "Preparing..."
-                        DownloadPhase.PROCESSING -> "Processing..."
-                        DownloadPhase.DOWNLOADING ->
-                            "${state.progress}% · ${formatBytes(state.downloadedBytes)} / ${formatBytes(state.totalBytes)}"
+                    text = when (item.status) {
+                        DownloadStatus.PREPARING -> "Preparing..."
+                        DownloadStatus.PROCESSING -> "Processing..."
+                        DownloadStatus.DOWNLOADING ->
+                            "${item.progress}% · ${formatBytes(item.downloadedBytes)} / ${formatBytes(item.totalBytes)}"
+                        else -> ""
                     },
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                if (state.phase == DownloadPhase.DOWNLOADING) {
+                if (item.status == DownloadStatus.DOWNLOADING) {
                     LinearProgressIndicator(
                         progress = { smoothProgress },
                         modifier = Modifier.fillMaxWidth(),
@@ -228,7 +243,7 @@ private fun InProgressDownloadCard(
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
             }
-            IconButton(onClick = onCancel) {
+            IconButton(onClick = { DownloadService.cancelBroadcast(context, item.id) }) {
                 Icon(
                     imageVector = TablerIcons.Outline.X,
                     contentDescription = "Cancel download",
@@ -241,15 +256,67 @@ private fun InProgressDownloadCard(
 }
 
 @Composable
+private fun FailedDownloadCard(
+    item: DownloadItem,
+    onDelete: () -> Unit,
+) {
+    Surface(
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            modifier = Modifier.padding(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Thumbnail(
+                url = item.thumbnailUrl,
+                modifier = Modifier
+                    .width(96.dp)
+                    .height(56.dp),
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Text(
+                    text = item.title,
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    text = item.error ?: "Download failed",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.error,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                )
+            }
+            IconButton(onClick = onDelete) {
+                Icon(
+                    imageVector = TablerIcons.Outline.Trash,
+                    contentDescription = "Delete",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun CompletedDownloadCard(
-    entry: DownloadEntry,
+    item: DownloadItem,
     onDelete: () -> Unit,
 ) {
     val context = LocalContext.current
-    var fileExists by remember(entry.id, entry.uri, entry.savedPath) { mutableStateOf(true) }
-    LaunchedEffect(entry.id, entry.uri, entry.savedPath) {
+    var fileExists by remember(item.id, item.uri, item.savedPath) { mutableStateOf(true) }
+    LaunchedEffect(item.id, item.uri, item.savedPath) {
         fileExists = withContext(Dispatchers.IO) {
-            DownloadHistory.fileExists(context, entry)
+            DownloadManager.fileExists(context, item)
         }
     }
 
@@ -264,7 +331,7 @@ private fun CompletedDownloadCard(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Thumbnail(
-                url = entry.thumbnailUrl,
+                url = item.thumbnailUrl,
                 modifier = Modifier
                     .width(96.dp)
                     .height(56.dp),
@@ -274,7 +341,7 @@ private fun CompletedDownloadCard(
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 Text(
-                    text = entry.title,
+                    text = item.title,
                     style = MaterialTheme.typography.titleSmall,
                     color = if (fileExists) {
                         MaterialTheme.colorScheme.onSurface
@@ -292,16 +359,16 @@ private fun CompletedDownloadCard(
                     )
                 } else {
                     Text(
-                        text = entry.fileName,
+                        text = item.fileName,
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                     )
                     Text(
-                        text = "${formatBytes(entry.sizeBytes)} · ${
+                        text = "${formatBytes(item.downloadedBytes)} · ${
                             SimpleDateFormat("MMM d · HH:mm", Locale.getDefault())
-                                .format(Date(entry.timestamp))
+                                .format(Date(item.timestamp))
                         }",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f),
@@ -310,7 +377,7 @@ private fun CompletedDownloadCard(
             }
             if (fileExists) {
                 Row {
-                    IconButton(onClick = { openFileLocation(context, entry) }) {
+                    IconButton(onClick = { locateFile(context, item) }) {
                         Icon(
                             imageVector = TablerIcons.Outline.Folder,
                             contentDescription = "Locate download",
@@ -332,11 +399,11 @@ private fun CompletedDownloadCard(
     }
 }
 
-private fun openFileLocation(context: Context, entry: DownloadEntry) {
-    val uri = entry.uri?.let(Uri::parse)
+private fun locateFile(context: Context, item: DownloadItem) {
+    val uri = item.uri?.let(Uri::parse)
     val intent = if (uri != null && uri.scheme == "content") {
         Intent(Intent.ACTION_VIEW)
-            .setDataAndType(uri, entry.mime.ifBlank { "*/*" })
+            .setDataAndType(uri, item.mime.ifBlank { "*/*" })
             .addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
             .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
     } else {
@@ -355,13 +422,13 @@ private fun openFileLocation(context: Context, entry: DownloadEntry) {
     }
 }
 
-private fun deleteEntry(context: Context, entry: DownloadEntry) {
+private fun deleteEntry(context: Context, item: DownloadItem) {
     runCatching {
         when {
-            entry.uri?.startsWith("content://") == true ->
-                context.contentResolver.delete(Uri.parse(entry.uri), null, null)
-            entry.savedPath.isNotBlank() -> File(entry.savedPath).delete()
+            item.uri?.startsWith("content://") == true ->
+                context.contentResolver.delete(Uri.parse(item.uri), null, null)
+            item.savedPath.isNotBlank() -> File(item.savedPath).delete()
         }
     }
-    DownloadHistory.remove(context, entry.id)
+    DownloadManager.remove(item.id)
 }

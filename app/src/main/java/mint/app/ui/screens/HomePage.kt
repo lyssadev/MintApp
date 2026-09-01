@@ -3,21 +3,14 @@ package mint.app.ui.screens
 import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
-import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -33,21 +26,17 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -59,27 +48,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import io.github.lyxnx.compose.ui.tablericons.TablerIcons
-import io.github.lyxnx.compose.ui.tablericons.outline.Check
 import io.github.lyxnx.compose.ui.tablericons.outline.Clipboard
-import io.github.lyxnx.compose.ui.tablericons.outline.Download
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import mint.app.data.DownloadManager
-import mint.app.data.DownloadPhase
 import mint.app.data.DownloadService
 import mint.app.data.StreamInfo
 import mint.app.data.StreamOption
 import mint.app.data.YouTubeResolver
 import mint.app.ui.components.StreamInfoCard
-import mint.app.ui.components.formatBytes
 import mint.app.ui.theme.RobotoMonoMedium
 
 private sealed interface ResolveState {
@@ -102,19 +83,10 @@ fun HomePage(modifier: Modifier = Modifier) {
     }
 
     val context = LocalContext.current
-    val downloadState by DownloadManager.state.collectAsState()
-
-    LaunchedEffect(downloadState.isComplete) {
-        if (downloadState.isComplete) {
-            delay(5000)
-            DownloadManager.reset()
-        }
-    }
 
     val startDownload: (StreamOption) -> Unit = { option ->
         val info = (HomeSession.state as? ResolveState.Success)?.info
         if (info != null) {
-            DownloadManager.reset()
             DownloadService.start(
                 context,
                 info.originalUrl,
@@ -217,54 +189,12 @@ fun HomePage(modifier: Modifier = Modifier) {
                     )
                 }
                 is ResolveState.Success -> {
-                    AnimatedVisibility(
-                        visible = !downloadState.isDownloading && !downloadState.isComplete,
-                        exit = fadeOut(
-                            animationSpec = tween(250, easing = FastOutSlowInEasing),
-                        ) + scaleOut(
-                            targetScale = 0.95f,
-                            animationSpec = tween(250, easing = FastOutSlowInEasing),
-                        ),
-                    ) {
-                        StreamInfoCard(
-                            info = current.info,
-                            downloading = false,
-                            onOptionClick = startDownload,
-                        )
-                    }
+                    StreamInfoCard(
+                        info = current.info,
+                        downloading = false,
+                        onOptionClick = startDownload,
+                    )
                 }
-            }
-            AnimatedVisibility(
-                visible = downloadState.isDownloading,
-                enter = fadeIn(
-                    animationSpec = tween(300, easing = FastOutSlowInEasing),
-                ) + scaleIn(
-                    initialScale = 0.95f,
-                    animationSpec = tween(300, easing = FastOutSlowInEasing),
-                ),
-            ) {
-                Spacer(modifier = Modifier.height(12.dp))
-                DownloadProgressCard()
-            }
-            AnimatedVisibility(
-                visible = downloadState.isComplete,
-                enter = fadeIn(
-                    animationSpec = tween(300, easing = FastOutSlowInEasing),
-                ) + scaleIn(
-                    initialScale = 0.95f,
-                    animationSpec = tween(300, easing = FastOutSlowInEasing),
-                ),
-            ) {
-                Spacer(modifier = Modifier.height(12.dp))
-                DownloadCompleteCard()
-            }
-            downloadState.error?.let { message ->
-                Spacer(modifier = Modifier.height(12.dp))
-                Text(
-                    text = message,
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.error,
-                )
             }
             Spacer(modifier = Modifier.height(120.dp))
         }
@@ -317,151 +247,4 @@ private fun ShimmerTitle() {
         style = titleStyle,
         onTextLayout = { textWidthPx = it.size.width.toFloat() },
     )
-}
-
-@Composable
-private fun DownloadProgressCard() {
-    val downloadState by DownloadManager.state.collectAsState()
-    val smoothProgress by animateFloatAsState(
-        targetValue = downloadState.progress / 100f,
-        animationSpec = spring(
-            dampingRatio = Spring.DampingRatioMediumBouncy,
-            stiffness = Spring.StiffnessLow,
-        ),
-        label = "smoothDownloadProgress",
-    )
-
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Icon(
-                    imageVector = TablerIcons.Outline.Download,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(18.dp),
-                )
-                Text(
-                    text = when (downloadState.phase) {
-                        DownloadPhase.PREPARING -> "Preparing download..."
-                        DownloadPhase.PROCESSING -> "Processing..."
-                        DownloadPhase.DOWNLOADING -> "Downloading ${downloadState.progress}%"
-                    },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
-                )
-                Spacer(modifier = Modifier.weight(1f))
-                Text(
-                    text = formatSpeed(downloadState.speedBytesPerSec),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            if (downloadState.phase != DownloadPhase.DOWNLOADING) {
-                LinearProgressIndicator(
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            } else {
-                LinearProgressIndicator(
-                    progress = { smoothProgress },
-                    modifier = Modifier.fillMaxWidth(),
-                )
-            }
-            if (downloadState.totalBytes > 0) {
-                Text(
-                    text = "${formatBytes(downloadState.downloadedBytes)} / ${formatBytes(downloadState.totalBytes)}",
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Surface(
-                onClick = { DownloadService.cancelActive() },
-                shape = RoundedCornerShape(10.dp),
-                color = MaterialTheme.colorScheme.surfaceContainerHighest,
-                modifier = Modifier.fillMaxWidth(),
-            ) {
-                Text(
-                    text = "Cancel",
-                    style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.error,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 10.dp),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-private fun DownloadCompleteCard() {
-    val downloadState by DownloadManager.state.collectAsState()
-
-    Surface(
-        modifier = Modifier
-            .fillMaxWidth()
-            .animateContentSize(),
-        shape = RoundedCornerShape(20.dp),
-        color = MaterialTheme.colorScheme.primaryContainer,
-    ) {
-        Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-            ) {
-                Icon(
-                    imageVector = TablerIcons.Outline.Check,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                    modifier = Modifier.size(18.dp),
-                )
-                Text(
-                    text = "Download complete",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onPrimaryContainer,
-                )
-            }
-            Text(
-                text = downloadState.fileName,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-            )
-            HorizontalDivider(
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.2f),
-            )
-            Text(
-                text = downloadState.savedPath,
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
-            )
-        }
-    }
-}
-
-fun formatSpeed(bytesPerSec: Long): String {
-    if (bytesPerSec <= 0) return "0 B/s"
-    val kb = bytesPerSec / 1024.0
-    val mb = kb / 1024.0
-    return when {
-        mb >= 1 -> String.format("%.1f MB/s", mb)
-        kb >= 1 -> String.format("%.0f KB/s", kb)
-        else -> "$bytesPerSec B/s"
-    }
 }

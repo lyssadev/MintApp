@@ -16,62 +16,83 @@ import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLRequest
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.util.UUID
-import java.util.concurrent.atomic.AtomicReference
+import java.util.concurrent.ConcurrentHashMap
 
 class DownloadService : Service() {
 
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
-    private var currentProcessId: String? = null
-    @Volatile private var canceled = false
+    private val jobs = ConcurrentHashMap<String, Job>()
+    private val processIds = ConcurrentHashMap<String, String>()
+    @Volatile private var startedForeground = false
+    @Volatile private var activeCount = 0
+
+    override fun onCreate() {
+        super.onCreate()
+        instance = this
+    }
 
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val originalUrl = intent?.getStringExtra(EXTRA_ORIGINAL_URL)
+        val downloadId = intent?.getStringExtra(EXTRA_DOWNLOAD_ID)
             ?: run { stopSelf(); return START_NOT_STICKY }
-        val formatId = intent.getStringExtra(EXTRA_FORMAT_ID)
-            ?: run { stopSelf(); return START_NOT_STICKY }
+        if (jobs.containsKey(downloadId)) return START_NOT_STICKY
+
+        val originalUrl = intent.getStringExtra(EXTRA_ORIGINAL_URL) ?: run { stopSelf(); return START_NOT_STICKY }
+        val formatId = intent.getStringExtra(EXTRA_FORMAT_ID) ?: run { stopSelf(); return START_NOT_STICKY }
         val title = intent.getStringExtra(EXTRA_TITLE) ?: "Download"
         val format = intent.getStringExtra(EXTRA_FORMAT) ?: "mp4"
         val estimatedSize = intent.getLongExtra(EXTRA_ESTIMATED_SIZE, 0L)
         val hasAudio = intent.getBooleanExtra(EXTRA_HAS_AUDIO, true)
         val thumbnailUrl = intent.getStringExtra(EXTRA_THUMBNAIL)
 
-        canceled = false
-        NotificationHelper.createChannel(this)
-        startForegroundCompat(NotificationHelper.buildDownloading(this, title, 0, thumbnailUrl))
-        DownloadManager.onPreparing(title, thumbnailUrl)
+        if (!startedForeground) {
+            startedForeground = true
+            NotificationHelper.createChannel(this)
+            startForegroundCompat(
+                NotificationHelper.buildDownloading(this, "Downloads", 0, null),
+            )
+        }
+        activeCount++
+        DownloadManager.addActive(downloadId, title, thumbnailUrl)
 
-        scope.launch {
+        val job = scope.launch {
             try {
-                download(originalUrl, formatId, title, format, estimatedSize, hasAudio, thumbnailUrl)
+                download(downloadId, originalUrl, formatId, title, format, estimatedSize, hasAudio, thumbnailUrl)
             } catch (e: YoutubeDL.CanceledException) {
-                Log.d(TAG, "download cancelled")
-                canceled = true
-                DownloadManager.reset()
+                Log.d(TAG, "download cancelled: $downloadId")
+                DownloadManager.cancel(downloadId)
             } catch (e: InterruptedException) {
-                Log.d(TAG, "download interrupted")
-                canceled = true
-                DownloadManager.reset()
+                Log.d(TAG, "download interrupted: $downloadId")
+                DownloadManager.cancel(downloadId)
             } catch (e: Exception) {
-                currentProcessId?.let { YoutubeDL.getInstance().destroyProcessById(it) }
-                NotificationHelper.notifyError(this@DownloadService, title, extractError(e.message))
-                DownloadManager.onError(extractError(e.message))
+                processIds.remove(downloadId)?.let { YoutubeDL.getInstance().destroyProcessById(it) }
+                Log.e(TAG, "download failed: $downloadId ${e.message}")
+                DownloadManager.fail(downloadId, extractError(e.message))
             } finally {
-                stopForeground(if (canceled) STOP_FOREGROUND_REMOVE else STOP_FOREGROUND_DETACH)
-                stopSelf()
+                jobs.remove(downloadId)
+                processIds.remove(downloadId)
+                activeCount--
+                if (activeCount <= 0) {
+                    startedForeground = false
+                    stopForeground(STOP_FOREGROUND_REMOVE)
+                    stopSelf()
+                }
             }
         }
+        jobs[downloadId] = job
         return START_NOT_STICKY
     }
 
     private suspend fun download(
+        downloadId: String,
         originalUrl: String,
         formatId: String,
         title: String,
@@ -96,8 +117,8 @@ class DownloadService : Service() {
             request.addOption("--retries", "10")
             request.addOption("--fragment-retries", "10")
 
-            currentProcessId = "mint_download_${System.currentTimeMillis()}"
-            activeProcessId.set(currentProcessId)
+            val processId = "mint_$downloadId"
+            processIds[downloadId] = processId
 
             var lastBytes = 0L
             var lastTime = 0L
@@ -110,8 +131,8 @@ class DownloadService : Service() {
                     line.contains("Fixup", true) ||
                     line.contains("Embedding", true))
                 if (isProcessing) {
-                    DownloadManager.onProcessing(title)
-                    NotificationHelper.notifyProcessing(this@DownloadService, title, thumbnailUrl)
+                    DownloadManager.updatePhase(downloadId, DownloadStatus.PROCESSING)
+                    NotificationHelper.notifyProcessing(this@DownloadService, downloadId, title, thumbnailUrl)
                 } else {
                     val p = progress.toFloat().coerceIn(0f, 100f)
                     val percent = p.toInt()
@@ -124,15 +145,13 @@ class DownloadService : Service() {
                     }
                     lastBytes = downloaded
                     lastTime = now
-                    Log.d(TAG, "progress: $percent% | eta: ${eta}s")
-                    DownloadManager.onProgress(percent, title, downloaded, estimatedSize, speed)
-                    NotificationHelper.updateProgress(this@DownloadService, percent, title, thumbnailUrl)
+                    Log.d(TAG, "progress[$downloadId]: $percent% | eta: ${eta}s")
+                    DownloadManager.updateProgress(downloadId, percent, downloaded, estimatedSize, speed)
+                    NotificationHelper.updateProgress(this@DownloadService, downloadId, percent, title, thumbnailUrl)
                 }
             }
 
-            YoutubeDL.getInstance().execute(request, currentProcessId, callback)
-            if (canceled) throw YoutubeDL.CanceledException()
-            activeProcessId.compareAndSet(currentProcessId, null)
+            YoutubeDL.getInstance().execute(request, processId, callback)
 
             val actualFile = tempDir.listFiles()
                 ?.filter { it.isFile && it.name.startsWith(baseName) && !it.name.endsWith(".part") }
@@ -160,25 +179,11 @@ class DownloadService : Service() {
             val sizeBytes = actualFile.length()
             actualFile.delete()
 
-            DownloadHistory.add(
-                this@DownloadService,
-                DownloadEntry(
-                    id = UUID.randomUUID().toString(),
-                    title = title,
-                    fileName = finalName,
-                    savedPath = target.displayPath,
-                    uri = target.uri?.toString(),
-                    mime = finalMime,
-                    thumbnailUrl = thumbnailUrl,
-                    sizeBytes = sizeBytes,
-                    timestamp = System.currentTimeMillis(),
-                ),
-            )
-
-            DownloadManager.onComplete(finalName, target.displayPath)
+            DownloadManager.complete(downloadId, finalName, target.displayPath, target.uri?.toString(), finalMime, sizeBytes)
             vibrate()
             NotificationHelper.notifyComplete(
                 this@DownloadService,
+                downloadId,
                 title,
                 finalName,
                 target.uri,
@@ -215,8 +220,8 @@ class DownloadService : Service() {
     }
 
     override fun onDestroy() {
-        activeProcessId.compareAndSet(currentProcessId, null)
-        currentProcessId?.let { YoutubeDL.getInstance().destroyProcessById(it) }
+        instance = null
+        processIds.values.forEach { YoutubeDL.getInstance().destroyProcessById(it) }
         scope.cancel()
         super.onDestroy()
     }
@@ -262,6 +267,7 @@ class DownloadService : Service() {
 
     companion object {
         private const val TAG = "MintDownload"
+        private const val EXTRA_DOWNLOAD_ID = "download_id"
         private const val EXTRA_ORIGINAL_URL = "original_url"
         private const val EXTRA_FORMAT_ID = "format_id"
         private const val EXTRA_TITLE = "title"
@@ -269,8 +275,9 @@ class DownloadService : Service() {
         private const val EXTRA_ESTIMATED_SIZE = "estimated_size"
         private const val EXTRA_HAS_AUDIO = "has_audio"
         private const val EXTRA_THUMBNAIL = "thumbnail"
+        const val EXTRA_CANCEL_ID = "cancel_id"
 
-        private val activeProcessId = AtomicReference<String?>(null)
+        @Volatile private var instance: DownloadService? = null
 
         fun start(
             context: Context,
@@ -282,7 +289,9 @@ class DownloadService : Service() {
             hasAudio: Boolean = true,
             thumbnail: String? = null,
         ) {
+            val downloadId = UUID.randomUUID().toString()
             val intent = Intent(context, DownloadService::class.java).apply {
+                putExtra(EXTRA_DOWNLOAD_ID, downloadId)
                 putExtra(EXTRA_ORIGINAL_URL, originalUrl)
                 putExtra(EXTRA_FORMAT_ID, formatId)
                 putExtra(EXTRA_TITLE, title)
@@ -294,14 +303,22 @@ class DownloadService : Service() {
             ContextCompat.startForegroundService(context, intent)
         }
 
-        fun cancelActive() {
-            activeProcessId.getAndSet(null)?.let { YoutubeDL.getInstance().destroyProcessById(it) }
+        fun cancel(id: String) {
+            instance?.processIds?.remove(id)?.let { YoutubeDL.getInstance().destroyProcessById(it) }
+        }
+
+        fun cancelBroadcast(context: Context, id: String) {
+            val intent = Intent(context, CancelDownloadReceiver::class.java).apply {
+                putExtra(EXTRA_CANCEL_ID, id)
+            }
+            context.sendBroadcast(intent)
         }
     }
 }
 
 class CancelDownloadReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
-        DownloadService.cancelActive()
+        val id = intent.getStringExtra(DownloadService.EXTRA_CANCEL_ID)
+        if (id != null) DownloadService.cancel(id)
     }
 }

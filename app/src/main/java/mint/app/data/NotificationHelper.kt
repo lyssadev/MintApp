@@ -14,9 +14,12 @@ import mint.app.R
 object NotificationHelper {
 
     const val CHANNEL_ID = "downloads"
-    private const val NOTIFICATION_ID = 1
+    private const val BASE_ID = 100
 
     private var channelCreated = false
+
+    private fun idFor(downloadId: String): Int =
+        BASE_ID + (downloadId.hashCode() and 0x7fffffff) % 10000
 
     fun createChannel(context: Context) {
         if (channelCreated) return
@@ -42,10 +45,12 @@ object NotificationHelper {
         )
     }
 
-    private fun cancelIntent(context: Context): PendingIntent {
-        val intent = Intent(context, CancelDownloadReceiver::class.java)
+    private fun cancelIntent(context: Context, downloadId: String): PendingIntent {
+        val intent = Intent(context, CancelDownloadReceiver::class.java).apply {
+            putExtra(DownloadService.EXTRA_CANCEL_ID, downloadId)
+        }
         return PendingIntent.getBroadcast(
-            context, 2, intent,
+            context, idFor(downloadId), intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
     }
@@ -90,7 +95,6 @@ object NotificationHelper {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(contentIntent(context))
-            .addAction(0, "Cancel", cancelIntent(context))
         largeIcon(context, thumbnailUrl)?.let { builder.setLargeIcon(it) }
         return builder.build()
     }
@@ -108,17 +112,22 @@ object NotificationHelper {
         return builder.build()
     }
 
-    fun notifyComplete(context: Context, title: String, fileName: String, fileUri: Uri?, mime: String) {
+    fun updateProgress(context: Context, downloadId: String, progress: Int, title: String, thumbnailUrl: String? = null) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.notify(NOTIFICATION_ID, buildComplete(context, title, fileName, fileUri, mime))
+        val builder = NotificationCompat.Builder(context, CHANNEL_ID)
+            .setSmallIcon(R.drawable.ic_notification_download_animated)
+            .setContentTitle(title)
+            .setContentText("$progress%")
+            .setProgress(100, progress, false)
+            .setOngoing(true)
+            .setOnlyAlertOnce(true)
+            .setContentIntent(contentIntent(context))
+            .addAction(0, "Cancel", cancelIntent(context, downloadId))
+        largeIcon(context, thumbnailUrl)?.let { builder.setLargeIcon(it) }
+        nm.notify(idFor(downloadId), builder.build())
     }
 
-    fun updateProgress(context: Context, progress: Int, title: String, thumbnailUrl: String? = null) {
-        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
-        nm.notify(NOTIFICATION_ID, buildDownloading(context, title, progress, thumbnailUrl))
-    }
-
-    fun notifyProcessing(context: Context, title: String, thumbnailUrl: String? = null) {
+    fun notifyProcessing(context: Context, downloadId: String, title: String, thumbnailUrl: String? = null) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_download_animated)
@@ -128,12 +137,17 @@ object NotificationHelper {
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(contentIntent(context))
-            .addAction(0, "Cancel", cancelIntent(context))
+            .addAction(0, "Cancel", cancelIntent(context, downloadId))
         largeIcon(context, thumbnailUrl)?.let { builder.setLargeIcon(it) }
-        nm.notify(NOTIFICATION_ID, builder.build())
+        nm.notify(idFor(downloadId), builder.build())
     }
 
-    fun notifyError(context: Context, title: String, error: String) {
+    fun notifyComplete(context: Context, downloadId: String, title: String, fileName: String, fileUri: Uri?, mime: String) {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.notify(idFor(downloadId), buildComplete(context, title, fileName, fileUri, mime))
+    }
+
+    fun notifyError(context: Context, downloadId: String, title: String, error: String) {
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_warning)
@@ -142,6 +156,11 @@ object NotificationHelper {
             .setAutoCancel(true)
             .setContentIntent(contentIntent(context))
             .build()
-        nm.notify(NOTIFICATION_ID, notification)
+        nm.notify(idFor(downloadId), notification)
+    }
+
+    fun dismiss(context: Context, downloadId: String) {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        nm.cancel(idFor(downloadId))
     }
 }
