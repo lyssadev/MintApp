@@ -141,15 +141,18 @@ object TikTokResolver : Resolver {
             throw Exception("No scope in TikTok data")
         }
         val videoDetail = scope.optJSONObject("webapp.video-detail")
+            ?: scope.optJSONObject("webapp.reflow.video.detail")
         if (videoDetail == null) {
-            Log.w(TAG, "buildItem: no webapp.video-detail; scope keys=${scope.keys().asSequence().toList()}")
+            Log.w(TAG, "buildItem: no webapp.video-detail / webapp.reflow.video.detail; scope keys=${scope.keys().asSequence().toList()}")
             throw Exception("No video detail in TikTok data")
         }
         val itemStruct = videoDetail.optJSONObject("itemInfo")?.optJSONObject("itemStruct")
+            ?: videoDetail.optJSONObject("itemStruct")
         if (itemStruct == null) {
             Log.w(TAG, "buildItem: no itemInfo.itemStruct; video-detail keys=${videoDetail.keys().asSequence().toList()}")
             throw Exception("No item struct in TikTok data")
         }
+        Log.d(TAG, "buildItem: itemStruct keys=${itemStruct.keys().asSequence().toList()}")
 
         val desc = itemStruct.optString("desc", "TikTok post").take(120)
         val author = itemStruct.optJSONObject("author")?.optString("uniqueId") ?: "tiktok"
