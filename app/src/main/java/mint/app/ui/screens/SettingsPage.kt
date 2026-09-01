@@ -49,6 +49,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
@@ -56,6 +57,7 @@ import androidx.compose.ui.window.Dialog
 import io.github.lyxnx.compose.ui.tablericons.TablerIcons
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandGithub
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandInstagram
+import io.github.lyxnx.compose.ui.tablericons.outline.BrandTiktok
 import io.github.lyxnx.compose.ui.tablericons.outline.Check
 import io.github.lyxnx.compose.ui.tablericons.outline.ChevronRight
 import io.github.lyxnx.compose.ui.tablericons.outline.Folder
@@ -69,6 +71,7 @@ import io.github.lyxnx.compose.ui.tablericons.outline.X
 import mint.app.BuildConfig
 import mint.app.R
 import mint.app.connection.InstagramLoginActivity
+import mint.app.connection.TikTokLoginActivity
 import mint.app.core.prefs.ConnectionPreferences
 import mint.app.core.prefs.DownloadPreferences
 import mint.app.resolution.impl.InstagramResolver
@@ -479,15 +482,6 @@ private fun ThemeSwatch(color: Color) {
 @Composable
 private fun ConnectionsSection() {
     val context = LocalContext.current
-    var linked by remember { mutableStateOf(ConnectionPreferences.isInstagramLinked(context)) }
-
-    val loginLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult(),
-    ) {
-        if (it.resultCode == Activity.RESULT_OK) {
-            linked = ConnectionPreferences.isInstagramLinked(context)
-        }
-    }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
@@ -495,100 +489,144 @@ private fun ConnectionsSection() {
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
         )
-        Surface(
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceContainer,
+        ConnectionCard(
+            title = "Instagram",
+            subtitle = { linked ->
+                if (linked) "Linked · used for Instagram downloads" else "Login to unlock full access"
+            },
+            icon = TablerIcons.Outline.BrandInstagram,
+            isLinked = { ConnectionPreferences.isInstagramLinked(context) },
+            loginActivityClass = InstagramLoginActivity::class.java,
+            onClear = {
+                ConnectionPreferences.clearInstagram(context)
+                InstagramResolver.clearSession()
+            },
+            unlinkMessage = "Instagram unlinked",
+        )
+        ConnectionCard(
+            title = "TikTok",
+            subtitle = { linked ->
+                if (linked) "Linked · used for TikTok downloads" else "Login to unlock full access"
+            },
+            icon = TablerIcons.Outline.BrandTiktok,
+            isLinked = { ConnectionPreferences.isTikTokLinked(context) },
+            loginActivityClass = TikTokLoginActivity::class.java,
+            onClear = {
+                ConnectionPreferences.clearTikTok(context)
+            },
+            unlinkMessage = "TikTok unlinked",
+        )
+    }
+}
+
+@Composable
+private fun ConnectionCard(
+    title: String,
+    subtitle: (Boolean) -> String,
+    icon: ImageVector,
+    isLinked: () -> Boolean,
+    loginActivityClass: Class<*>,
+    onClear: () -> Unit,
+    unlinkMessage: String,
+) {
+    val context = LocalContext.current
+    var linked by remember { mutableStateOf(isLinked()) }
+
+    val loginLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult(),
+    ) {
+        if (it.resultCode == Activity.RESULT_OK) {
+            linked = isLinked()
+        }
+    }
+
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+    ) {
+        Row(
+            modifier = Modifier.padding(20.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(
-                modifier = Modifier.padding(20.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalAlignment = Alignment.CenterVertically,
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(24.dp),
+            )
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
             ) {
-                Icon(
-                    imageVector = TablerIcons.Outline.BrandInstagram,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.size(24.dp),
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
                 )
-                Column(
-                    modifier = Modifier.weight(1f),
-                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                Text(
+                    text = subtitle(linked),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (linked) {
+                Surface(
+                    onClick = {
+                        onClear()
+                        linked = false
+                        Toast.makeText(
+                            context,
+                            unlinkMessage,
+                            Toast.LENGTH_SHORT,
+                        ).show()
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.errorContainer,
                 ) {
-                    Text(
-                        text = "Instagram",
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = MaterialTheme.colorScheme.onSurface,
-                    )
-                    Text(
-                        text = when {
-                            linked -> "Linked · used for Instagram downloads"
-                            else -> "Login to unlock full access"
-                        },
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                }
-                if (linked) {
-                    Surface(
-                        onClick = {
-                            ConnectionPreferences.clearInstagram(context)
-                            InstagramResolver.clearSession()
-                            linked = false
-                            Toast.makeText(
-                                context,
-                                "Instagram unlinked",
-                                Toast.LENGTH_SHORT,
-                            ).show()
-                        },
-                        shape = RoundedCornerShape(10.dp),
-                        color = MaterialTheme.colorScheme.errorContainer,
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(
-                                imageVector = TablerIcons.Outline.PlugConnectedX,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onErrorContainer,
-                                modifier = Modifier.size(14.dp),
-                            )
-                            Text(
-                                text = "Unlink",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onErrorContainer,
-                            )
-                        }
+                        Icon(
+                            imageVector = TablerIcons.Outline.PlugConnectedX,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onErrorContainer,
+                            modifier = Modifier.size(14.dp),
+                        )
+                        Text(
+                            text = "Unlink",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                        )
                     }
-                } else {
-                    Surface(
-                        onClick = {
-                            loginLauncher.launch(
-                                Intent(context, InstagramLoginActivity::class.java),
-                            )
-                        },
-                        shape = RoundedCornerShape(10.dp),
-                        color = MaterialTheme.colorScheme.primaryContainer,
+                }
+            } else {
+                Surface(
+                    onClick = {
+                        loginLauncher.launch(Intent(context, loginActivityClass))
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                ) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Icon(
-                                imageVector = TablerIcons.Outline.Link,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.size(14.dp),
-                            )
-                            Text(
-                                text = "Link",
-                                style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onPrimaryContainer,
-                            )
-                        }
+                        Icon(
+                            imageVector = TablerIcons.Outline.Link,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                            modifier = Modifier.size(14.dp),
+                        )
+                        Text(
+                            text = "Link",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        )
                     }
                 }
             }

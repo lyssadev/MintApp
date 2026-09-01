@@ -51,7 +51,13 @@ object YtDlpResolver : Resolver {
         try {
             val info = if (url.contains("instagram.com")) {
                 val request = YoutubeDLRequest(url)
-                writeCookiesFile()?.let { cookiesFile ->
+                writeInstagramCookiesFile()?.let { cookiesFile ->
+                    request.addOption("--cookies", cookiesFile.absolutePath)
+                }
+                YoutubeDL.getInstance().getInfo(request)
+            } else if (url.contains("tiktok.com")) {
+                val request = YoutubeDLRequest(url)
+                writeTikTokCookiesFile()?.let { cookiesFile ->
                     request.addOption("--cookies", cookiesFile.absolutePath)
                 }
                 YoutubeDL.getInstance().getInfo(request)
@@ -81,7 +87,8 @@ object YtDlpResolver : Resolver {
                 (ext == "gif" || ext == "webp") && vc != "none" && (f.width ?: 0) > 0
             }
 
-            val isMusicOnly = videoFormats.isEmpty()
+            val hasImages = imageFormats.isNotEmpty() || gifFormats.isNotEmpty()
+            val isMusicOnly = videoFormats.isEmpty() && !hasImages
             val durationSec = (info.duration ?: 0).toLong()
 
             val videoOptions = videoFormats
@@ -155,7 +162,7 @@ object YtDlpResolver : Resolver {
                 else -> "other"
             }
 
-            val finalVideoOptions = if (platform == "youtube") {
+            val finalVideoOptions = if (platform == "youtube" || platform == "tiktok") {
                 videoOptions
             } else {
                 listOfNotNull(videoOptions.firstOrNull { it.hasAudio } ?: videoOptions.firstOrNull())
@@ -182,7 +189,7 @@ object YtDlpResolver : Resolver {
         }
     }
 
-    private fun writeCookiesFile(): File? {
+    private fun writeInstagramCookiesFile(): File? {
         val ctx = appContext ?: return null
         val cookies = ConnectionPreferences.instagramCookies(ctx)
         if (cookies.isEmpty()) return null
@@ -193,6 +200,32 @@ object YtDlpResolver : Resolver {
                 val secure = if (name in setOf("sessionid", "csrftoken", "ds_user_id")) "TRUE" else "FALSE"
                 lines += listOf(
                     "#HttpOnly_.instagram.com",
+                    "TRUE",
+                    "/",
+                    secure,
+                    "0",
+                    name,
+                    value,
+                ).joinToString("\t")
+            }
+            file.writeText(lines.joinToString("\n"))
+            file
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun writeTikTokCookiesFile(): File? {
+        val ctx = appContext ?: return null
+        val cookies = ConnectionPreferences.tiktokCookies(ctx)
+        if (cookies.isEmpty()) return null
+        return try {
+            val file = File(ctx.cacheDir, "tiktok_cookies.txt")
+            val lines = mutableListOf("# Netscape HTTP Cookie File")
+            cookies.forEach { (name, value) ->
+                val secure = if (name == "sid_tt") "TRUE" else "FALSE"
+                lines += listOf(
+                    "#HttpOnly_.tiktok.com",
                     "TRUE",
                     "/",
                     secure,

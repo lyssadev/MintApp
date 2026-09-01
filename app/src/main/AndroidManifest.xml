@@ -59,6 +59,12 @@
             android:launchMode="singleTop"
             android:theme="@style/Theme.Mint" />
 
+        <activity
+            android:name=".connection.TikTokLoginActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:theme="@style/Theme.Mint" />
+
         <service
             android:name=".service.DownloadService"
             android:exported="false"
