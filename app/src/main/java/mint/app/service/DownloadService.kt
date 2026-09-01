@@ -60,6 +60,7 @@ class DownloadService : Service() {
         val hasAudio = intent.getBooleanExtra(EXTRA_HAS_AUDIO, true)
         val thumbnailUrl = intent.getStringExtra(EXTRA_THUMBNAIL)
         val imageUrl = intent.getStringExtra(EXTRA_IMAGE_URL)
+        val httpHeaders = stringMapFrom(intent.getStringExtra(EXTRA_HTTP_HEADERS))
 
         titles[downloadId] = title
         thumbnails[downloadId] = thumbnailUrl
@@ -70,7 +71,12 @@ class DownloadService : Service() {
             NotificationHelper.createChannel(this)
             startForegroundCompat(
                 foregroundId,
-                NotificationHelper.buildDownloading(this, title, 0, thumbnailUrl),
+                NotificationHelper.buildDownloading(
+                    this,
+                    title,
+                    if (imageUrl != null) -1 else 0,
+                    thumbnailUrl,
+                ),
             )
         }
         activeCount++
@@ -80,7 +86,7 @@ class DownloadService : Service() {
             try {
                 download(
                     downloadId, originalUrl, formatId, title, format,
-                    estimatedSize, hasAudio, thumbnailUrl, imageUrl,
+                    estimatedSize, hasAudio, thumbnailUrl, imageUrl, httpHeaders,
                 )
             } catch (e: YoutubeDL.CanceledException) {
                 Log.d(TAG, "download cancelled: $downloadId")
@@ -137,6 +143,7 @@ class DownloadService : Service() {
         hasAudio: Boolean,
         thumbnailUrl: String?,
         imageUrl: String?,
+        httpHeaders: Map<String, String>,
     ): Unit = withContext(Dispatchers.IO) {
         val baseName = buildBaseName(title)
         val tempBase = "$baseName.${downloadId.take(8)}"
@@ -153,7 +160,36 @@ class DownloadService : Service() {
                 conn.connectTimeout = 15000
                 conn.readTimeout = 15000
                 conn.instanceFollowRedirects = true
+                httpHeaders.forEach { (k, v) -> conn.setRequestProperty(k, v) }
+                if (!httpHeaders.containsKey("User-Agent")) {
+                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36")
+                }
+                if (!httpHeaders.containsKey("Accept")) {
+                    conn.setRequestProperty("Accept", "*/*")
+                }
+                when {
+                    originalUrl.contains("tiktok.com") || originalUrl.contains("tiktokv.com") -> {
+                        if (!httpHeaders.containsKey("Referer")) {
+                            conn.setRequestProperty("Referer", "https://www.tiktok.com/")
+                        }
+                        if (!httpHeaders.containsKey("Origin")) {
+                            conn.setRequestProperty("Origin", "https://www.tiktok.com")
+                        }
+                    }
+                    originalUrl.contains("instagram.com") -> {
+                        if (!httpHeaders.containsKey("Referer")) {
+                            conn.setRequestProperty("Referer", "https://www.instagram.com/")
+                        }
+                        if (!httpHeaders.containsKey("Origin")) {
+                            conn.setRequestProperty("Origin", "https://www.instagram.com")
+                        }
+                    }
+                }
                 conn.connect()
+                val code = conn.responseCode
+                if (code !in 200..299) {
+                    throw Exception("Download failed: HTTP $code")
+                }
                 val total = conn.contentLengthLong.coerceAtLeast(0)
                 conn.inputStream.use { input ->
                     imgFile.outputStream().use { output ->
@@ -165,13 +201,15 @@ class DownloadService : Service() {
                             if (read < 0) break
                             output.write(buf, 0, read)
                             downloaded += read
-                            val p = if (total > 0) ((downloaded * 100) / total).toInt() else 0
-                            DownloadManager.updateProgress(downloadId, p, downloaded, total, 0)
+                            val p = if (total > 0) ((downloaded * 100) / total).toInt() else -1
+                            DownloadManager.updateProgress(downloadId, if (p < 0) 0 else p, downloaded, total, 0)
                             NotificationHelper.updateProgress(this@DownloadService, downloadId, p, title, thumbnailUrl)
                         }
                     }
                 }
                 actualFile = imgFile
+            } else if (originalUrl.contains("tiktok.com") || originalUrl.contains("tiktokv.com")) {
+                throw Exception("TikTok video URL missing from resolved data")
             } else {
                 tempDir.listFiles()
                     ?.filter { it.isFile && it.name.startsWith(tempBase) }
@@ -389,6 +427,7 @@ class DownloadService : Service() {
         private const val EXTRA_HAS_AUDIO = "has_audio"
         private const val EXTRA_THUMBNAIL = "thumbnail"
         private const val EXTRA_IMAGE_URL = "image_url"
+        private const val EXTRA_HTTP_HEADERS = "http_headers"
         const val EXTRA_CANCEL_ID = "cancel_id"
 
         @Volatile private var instance: DownloadService? = null
@@ -403,6 +442,7 @@ class DownloadService : Service() {
             hasAudio: Boolean = true,
             thumbnail: String? = null,
             imageUrl: String? = null,
+            httpHeaders: Map<String, String> = emptyMap(),
         ): String {
             val downloadId = UUID.randomUUID().toString()
             val intent = Intent(context, DownloadService::class.java).apply {
@@ -415,6 +455,7 @@ class DownloadService : Service() {
                 putExtra(EXTRA_HAS_AUDIO, hasAudio)
                 putExtra(EXTRA_THUMBNAIL, thumbnail)
                 putExtra(EXTRA_IMAGE_URL, imageUrl)
+                putExtra(EXTRA_HTTP_HEADERS, stringMapTo(httpHeaders))
             }
             ContextCompat.startForegroundService(context, intent)
             return downloadId
@@ -430,6 +471,19 @@ class DownloadService : Service() {
                 putExtra(EXTRA_CANCEL_ID, id)
             }
             context.sendBroadcast(intent)
+        }
+
+        private fun stringMapTo(map: Map<String, String>): String? {
+            if (map.isEmpty()) return null
+            return map.entries.joinToString("\u0001") { "${it.key}\u0002${it.value}" }
+        }
+
+        private fun stringMapFrom(raw: String?): Map<String, String> {
+            if (raw.isNullOrEmpty()) return emptyMap()
+            return raw.split("\u0001").mapNotNull { entry ->
+                val idx = entry.indexOf('\u0002')
+                if (idx <= 0) null else entry.substring(0, idx) to entry.substring(idx + 1)
+            }.toMap()
         }
     }
 }

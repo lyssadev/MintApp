@@ -47,8 +47,9 @@ object FileSaver {
                 append('/')
                 append(relativeSub)
             }
+            val uniqueName = uniqueNameForMediaStore(context, fileName, mimeType, relativePath)
             val values = ContentValues().apply {
-                put(MediaStore.MediaColumns.DISPLAY_NAME, fileName)
+                put(MediaStore.MediaColumns.DISPLAY_NAME, uniqueName)
                 put(MediaStore.MediaColumns.MIME_TYPE, mimeType)
                 put(MediaStore.MediaColumns.RELATIVE_PATH, relativePath)
             }
@@ -61,18 +62,58 @@ object FileSaver {
             OutputTarget(
                 outputStream = stream,
                 uri = uri,
-                displayPath = "/sdcard/Download/$relativeSub/$fileName",
+                displayPath = "/sdcard/Download/$relativeSub/$uniqueName",
             )
         } else {
             val base = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS)
             val dir = File(File(base, subfolder), typeDir)
             dir.mkdirs()
-            val file = File(dir, fileName)
+            val uniqueName = uniqueNameForFs(dir, fileName)
+            val file = File(dir, uniqueName)
             OutputTarget(
                 outputStream = FileOutputStream(file),
                 uri = Uri.fromFile(file),
                 displayPath = file.absolutePath,
             )
         }
+    }
+
+    private fun uniqueNameForMediaStore(
+        context: Context,
+        fileName: String,
+        mimeType: String,
+        relativePath: String,
+    ): String {
+        val existing = mutableSetOf<String>()
+        context.contentResolver.query(
+            MediaStore.Downloads.EXTERNAL_CONTENT_URI,
+            arrayOf(MediaStore.MediaColumns.DISPLAY_NAME),
+            "${MediaStore.MediaColumns.RELATIVE_PATH} LIKE ?",
+            arrayOf("$relativePath/%"),
+            null,
+        )?.use { cursor ->
+            val idx = cursor.getColumnIndex(MediaStore.MediaColumns.DISPLAY_NAME)
+            while (cursor.moveToNext()) {
+                cursor.getString(idx)?.let { existing.add(it) }
+            }
+        }
+        if (fileName !in existing) return fileName
+        val base = fileName.substringBeforeLast('.', fileName)
+        val ext = fileName.substringAfterLast('.', "").let { if (it == fileName) "" else ".$it" }
+        var n = 1
+        while (true) {
+            val candidate = "$base ($n)$ext"
+            if (candidate !in existing) return candidate
+            n++
+        }
+    }
+
+    private fun uniqueNameForFs(dir: File, fileName: String): String {
+        if (!File(dir, fileName).exists()) return fileName
+        val base = fileName.substringBeforeLast('.', fileName)
+        val ext = fileName.substringAfterLast('.', "").let { if (it == fileName) "" else ".$it" }
+        var n = 1
+        while (File(dir, "$base ($n)$ext").exists()) n++
+        return "$base ($n)$ext"
     }
 }

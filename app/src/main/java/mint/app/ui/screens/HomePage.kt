@@ -111,19 +111,21 @@ fun HomePage(modifier: Modifier = Modifier) {
 
     val context = LocalContext.current
 
-    val startDownload: (MediaFormat) -> Unit = { option ->
+    val startDownload: (MediaFormat, Int?) -> Unit = { option, index ->
         val info = (HomeSession.state as? ResolveState.Success)?.info
         if (info != null) {
+            val title = if (index != null) "${info.title} (${index + 1})" else info.title
             DownloadService.start(
                 context,
                 info.originalUrl,
                 option.formatId,
-                info.title,
+                title,
                 option.format,
                 option.estimatedSizeBytes,
                 option.hasAudio,
                 info.thumbnailUrl,
                 option.url,
+                option.httpHeaders,
             )
         }
     }
@@ -215,15 +217,17 @@ fun HomePage(modifier: Modifier = Modifier) {
                     when {
                         info.platform != "youtube" && (info.imageOptions.isNotEmpty() || info.gifOptions.isNotEmpty() || allItems.size > 1) -> MediaOptionsSection(
                             info = info,
-                            onDownloadItem = { option -> startDownload(option) },
+                            onDownloadItem = { option -> startDownload(option, null) },
                             onDownloadAll = {
-                                allItems.forEach { startDownload(it) }
+                                allItems.forEachIndexed { index, option ->
+                                    startDownload(option, index)
+                                }
                             },
                         )
                         info.platform == "youtube" -> StreamInfoCard(
                             info = info,
                             downloading = false,
-                            onOptionClick = startDownload,
+                            onOptionClick = { option -> startDownload(option, null) },
                         )
                         else -> AutoDownloadFlow(info = info)
                     }
@@ -392,14 +396,21 @@ private fun AutoDownloadFlow(info: MediaItem) {
 
     LaunchedEffect(info.originalUrl) {
         if (HomeSession.activeDownloadId == null) {
+            val bestFormat = info.videoOptions.firstOrNull()
+                ?: info.imageOptions.firstOrNull()
+                ?: info.gifOptions.firstOrNull()
+                ?: info.audioOptions.firstOrNull()
+            val bestUrl = bestFormat?.url
             val id = DownloadService.start(
                 context,
                 info.originalUrl,
-                "best",
+                if (bestUrl != null) "" else "best",
                 info.title,
                 "mp4",
                 hasAudio = true,
                 thumbnail = info.thumbnailUrl,
+                imageUrl = bestUrl,
+                httpHeaders = bestFormat?.httpHeaders ?: emptyMap(),
             )
             HomeSession.activeDownloadId = id
         }

@@ -81,11 +81,12 @@ object NotificationHelper {
     }
 
     fun buildDownloading(context: Context, title: String, progress: Int, thumbnailUrl: String? = null): Notification {
+        val indeterminate = progress < 0
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_download_animated)
             .setContentTitle(title)
-            .setContentText("$progress%")
-            .setProgress(100, progress, false)
+            .setContentText(if (indeterminate) "Downloading..." else "$progress%")
+            .setProgress(if (indeterminate) 0 else 100, progress.coerceAtLeast(0), indeterminate)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(contentIntent(context))
@@ -94,12 +95,13 @@ object NotificationHelper {
     }
 
     fun updateProgress(context: Context, downloadId: String, progress: Int, title: String, thumbnailUrl: String? = null) {
+        val indeterminate = progress < 0
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_download_animated)
             .setContentTitle(title)
-            .setContentText("$progress%")
-            .setProgress(100, progress, false)
+            .setContentText(if (indeterminate) "Downloading..." else "$progress%")
+            .setProgress(if (indeterminate) 0 else 100, progress.coerceAtLeast(0), indeterminate)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(contentIntent(context))
