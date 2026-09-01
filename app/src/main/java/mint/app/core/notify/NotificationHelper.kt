@@ -1,4 +1,4 @@
-package mint.app.data
+package mint.app.core.notify
 
 import android.app.Notification
 import android.app.NotificationChannel
@@ -6,10 +6,13 @@ import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import androidx.core.app.NotificationCompat
 import mint.app.core.model.DownloadItem
 import mint.app.MainActivity
 import mint.app.R
+import mint.app.data.CancelDownloadReceiver
+import mint.app.data.DownloadService
 
 object NotificationHelper {
 

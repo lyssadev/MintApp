@@ -23,6 +23,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import mint.app.core.manager.DownloadManager
 import mint.app.core.model.DownloadStatus
+import mint.app.core.notify.NotificationHelper
 import mint.app.core.storage.FileSaver
 import java.io.File
 import java.util.UUID
