@@ -45,9 +45,15 @@ android {
         }
         release {
             signingConfig = signingConfigs.getByName("mint")
+            isDebuggable = false
+            isShrinkResources = true
             optimization {
-                enable = false
+                enable = true
             }
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
     compileOptions {
