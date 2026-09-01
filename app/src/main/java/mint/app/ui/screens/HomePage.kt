@@ -213,7 +213,7 @@ fun HomePage(modifier: Modifier = Modifier) {
                     val info = current.info
                     val allItems = info.imageOptions + info.gifOptions + info.videoOptions
                     when {
-                        allItems.size > 1 && info.platform != "youtube" -> MediaOptionsSection(
+                        info.platform != "youtube" && (info.imageOptions.isNotEmpty() || info.gifOptions.isNotEmpty() || allItems.size > 1) -> MediaOptionsSection(
                             info = info,
                             onDownloadItem = { option -> startDownload(option) },
                             onDownloadAll = {
