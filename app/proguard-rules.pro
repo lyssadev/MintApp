@@ -18,6 +18,12 @@
 # YoutubeDL and its mapper classes are populated reflectively (JSON -> POJO).
 -keep class com.yausername.** { *; }
 
+# --- commons-compress (transitive dep of youtubedl-android) ---
+# ExtraFieldUtils.<clinit> registers ZipExtraField implementations reflectively
+# (instantiated via their no-arg constructor). R8 full mode's renaming and class
+# merging break that, so keep the whole zip package intact.
+-keep class org.apache.commons.compress.archivers.zip.** { *; }
+
 # --- OkHttp / Okio ---
 # The application uses OkHttp for TikTok/Instagram/updates and Coil networking.
 # Coil 3 and OkHttp ship their own consumer rules; keep these as a fallback.

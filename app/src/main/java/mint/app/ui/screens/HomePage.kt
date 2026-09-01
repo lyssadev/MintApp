@@ -115,6 +115,7 @@ fun HomePage(modifier: Modifier = Modifier) {
         val info = (HomeSession.state as? ResolveState.Success)?.info
         if (info != null) {
             val title = if (index != null) "${info.title} (${index + 1})" else info.title
+            val directUrl = if (info.platform == "youtube") null else option.url
             DownloadService.start(
                 context,
                 info.originalUrl,
@@ -124,7 +125,7 @@ fun HomePage(modifier: Modifier = Modifier) {
                 option.estimatedSizeBytes,
                 option.hasAudio,
                 info.thumbnailUrl,
-                option.url,
+                directUrl,
                 option.httpHeaders,
             )
         }
