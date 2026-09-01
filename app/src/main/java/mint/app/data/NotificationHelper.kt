@@ -18,7 +18,7 @@ object NotificationHelper {
 
     private var channelCreated = false
 
-    private fun idFor(downloadId: String): Int =
+    fun idFor(downloadId: String): Int =
         BASE_ID + (downloadId.hashCode() and 0x7fffffff) % 10000
 
     fun createChannel(context: Context) {

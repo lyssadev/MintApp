@@ -49,7 +49,10 @@ object DownloadManager {
             prefs = context.applicationContext
                 .getSharedPreferences("mint_downloads", Context.MODE_PRIVATE)
         }
-        _items.value = parse(prefs?.getString(KEY, null))
+        val persisted = parse(prefs?.getString(KEY, null))
+        val current = _items.value
+        // merge: keep in-memory active items, add persisted ones not already present
+        _items.value = current + persisted.filter { p -> current.none { it.id == p.id } }
         refreshActiveCount()
     }
 

@@ -2,6 +2,7 @@ package mint.app.ui.components
 
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
@@ -23,6 +24,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -160,11 +162,30 @@ private fun FloatingBottomBarItem(
             )
         }
         if (badgeCount > 0) {
+            val badgeScale = remember { Animatable(1f) }
+            LaunchedEffect(badgeCount) {
+                badgeScale.snapTo(1f)
+                badgeScale.animateTo(
+                    targetValue = 1.5f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessHigh,
+                    ),
+                )
+                badgeScale.animateTo(
+                    targetValue = 1f,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioMediumBouncy,
+                        stiffness = Spring.StiffnessMedium,
+                    ),
+                )
+            }
             Box(
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(top = 3.dp, end = 5.dp)
                     .size(15.dp)
+                    .scale(badgeScale.value)
                     .background(
                         color = MaterialTheme.colorScheme.error,
                         shape = CircleShape,

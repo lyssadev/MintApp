@@ -30,7 +30,10 @@ class DownloadService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
     private val jobs = ConcurrentHashMap<String, Job>()
     private val processIds = ConcurrentHashMap<String, String>()
+    private val titles = ConcurrentHashMap<String, String>()
+    private val thumbnails = ConcurrentHashMap<String, String?>()
     @Volatile private var startedForeground = false
+    @Volatile private var foregroundId = 0
     @Volatile private var activeCount = 0
 
     override fun onCreate() {
@@ -53,11 +56,16 @@ class DownloadService : Service() {
         val hasAudio = intent.getBooleanExtra(EXTRA_HAS_AUDIO, true)
         val thumbnailUrl = intent.getStringExtra(EXTRA_THUMBNAIL)
 
+        titles[downloadId] = title
+        thumbnails[downloadId] = thumbnailUrl
+
         if (!startedForeground) {
             startedForeground = true
+            foregroundId = NotificationHelper.idFor(downloadId)
             NotificationHelper.createChannel(this)
             startForegroundCompat(
-                NotificationHelper.buildDownloading(this, "Downloads", 0, null),
+                foregroundId,
+                NotificationHelper.buildDownloading(this, title, 0, thumbnailUrl),
             )
         }
         activeCount++
@@ -68,9 +76,11 @@ class DownloadService : Service() {
                 download(downloadId, originalUrl, formatId, title, format, estimatedSize, hasAudio, thumbnailUrl)
             } catch (e: YoutubeDL.CanceledException) {
                 Log.d(TAG, "download cancelled: $downloadId")
+                NotificationHelper.dismiss(this@DownloadService, downloadId)
                 DownloadManager.cancel(downloadId)
             } catch (e: InterruptedException) {
                 Log.d(TAG, "download interrupted: $downloadId")
+                NotificationHelper.dismiss(this@DownloadService, downloadId)
                 DownloadManager.cancel(downloadId)
             } catch (e: Exception) {
                 processIds.remove(downloadId)?.let { YoutubeDL.getInstance().destroyProcessById(it) }
@@ -79,11 +89,29 @@ class DownloadService : Service() {
             } finally {
                 jobs.remove(downloadId)
                 processIds.remove(downloadId)
+                titles.remove(downloadId)
+                thumbnails.remove(downloadId)
                 activeCount--
                 if (activeCount <= 0) {
                     startedForeground = false
+                    foregroundId = 0
                     stopForeground(STOP_FOREGROUND_REMOVE)
                     stopSelf()
+                } else if (NotificationHelper.idFor(downloadId) == foregroundId) {
+                    // move foreground to another active download so it keeps a live notification
+                    val next = jobs.keys.firstOrNull()
+                    if (next != null) {
+                        foregroundId = NotificationHelper.idFor(next)
+                        startForegroundCompat(
+                            foregroundId,
+                            NotificationHelper.buildDownloading(
+                                this@DownloadService,
+                                titles[next] ?: "Download",
+                                0,
+                                thumbnails[next],
+                            ),
+                        )
+                    }
                 }
             }
         }
@@ -195,15 +223,15 @@ class DownloadService : Service() {
         }
     }
 
-    private fun startForegroundCompat(notification: android.app.Notification) {
+    private fun startForegroundCompat(id: Int, notification: android.app.Notification) {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             startForeground(
-                1,
+                id,
                 notification,
                 ServiceInfo.FOREGROUND_SERVICE_TYPE_MEDIA_PLAYBACK,
             )
         } else {
-            startForeground(1, notification)
+            startForeground(id, notification)
         }
     }
 
