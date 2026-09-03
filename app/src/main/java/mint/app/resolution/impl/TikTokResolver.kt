@@ -44,7 +44,7 @@ object TikTokResolver : Resolver {
     private val ID_RE = Regex("https?://[^/]+/(?:video|photo)/(\\d+)/?")
     private val SHARE_RE = Regex("https?://(?:www\\.)?tiktok\\.com/t/[A-Za-z0-9_-]+/?")
     private val MOBILE_RE = Regex("https?://m\\.tiktok\\.com/v/\\d+/?")
-    private val SHORT_RE = Regex("https?://vm\\.tiktok\\.com/[\\w]+/?")
+    private val SHORT_RE = Regex("https?://(?:vm|vt)\\.tiktok\\.com/[A-Za-z0-9_-]+/?")
     private val TIKTOKV_RE = Regex("https?://www\\.tiktokv?\\.com/share/video/\\d+/?")
 
     @Volatile private var appContext: Context? = null
