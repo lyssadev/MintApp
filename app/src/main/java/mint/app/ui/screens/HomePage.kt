@@ -101,6 +101,11 @@ object HomeSession {
             }
         }
     }
+
+    fun reset() {
+        activeDownloadId = null
+        state = ResolveState.Idle
+    }
 }
 
 @Composable
@@ -172,20 +177,35 @@ fun HomePage(modifier: Modifier = Modifier) {
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                 keyboardActions = KeyboardActions(onSearch = { resolve(HomeSession.link) }),
                 trailingIcon = {
-                    IconButton(onClick = {
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                        val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
-                        if (!text.isNullOrBlank()) {
-                            HomeSession.link = text
-                            resolve(text)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (HomeSession.link.isNotBlank()) {
+                            IconButton(onClick = {
+                                HomeSession.link = ""
+                                HomeSession.reset()
+                            }) {
+                                Icon(
+                                    imageVector = TablerIcons.Outline.X,
+                                    contentDescription = "Clear link",
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.size(20.dp),
+                                )
+                            }
                         }
-                    }) {
-                        Icon(
-                            imageVector = TablerIcons.Outline.Clipboard,
-                            contentDescription = "Paste from clipboard",
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                            modifier = Modifier.size(20.dp),
-                        )
+                        IconButton(onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                            val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
+                            if (!text.isNullOrBlank()) {
+                                HomeSession.link = text
+                                resolve(text)
+                            }
+                        }) {
+                            Icon(
+                                imageVector = TablerIcons.Outline.Clipboard,
+                                contentDescription = "Paste from clipboard",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
                     }
                 },
             )
@@ -394,6 +414,8 @@ private fun AutoDownloadFlow(info: MediaItem) {
     val context = LocalContext.current
     val items by DownloadManager.items.collectAsState()
     val activeItem = items.firstOrNull { it.id == HomeSession.activeDownloadId }
+    val activeStatus = activeItem?.status
+    var sawActive by remember { mutableStateOf(false) }
 
     LaunchedEffect(info.originalUrl) {
         if (HomeSession.activeDownloadId == null) {
@@ -417,21 +439,46 @@ private fun AutoDownloadFlow(info: MediaItem) {
         }
     }
 
-    LaunchedEffect(activeItem?.status) {
-        if (activeItem?.status == DownloadStatus.COMPLETED) {
-            delay(5000)
-            HomeSession.activeDownloadId = null
-            HomeSession.state = ResolveState.Idle
+    LaunchedEffect(HomeSession.activeDownloadId, activeStatus) {
+        val trackedId = HomeSession.activeDownloadId ?: return@LaunchedEffect
+        when (activeStatus) {
+            DownloadStatus.PREPARING,
+            DownloadStatus.DOWNLOADING,
+            DownloadStatus.PROCESSING,
+            -> sawActive = true
+            DownloadStatus.COMPLETED,
+            DownloadStatus.FAILED,
+            -> {
+                if (sawActive) delay(5000)
+                if (HomeSession.activeDownloadId == trackedId &&
+                    HomeSession.state is ResolveState.Success
+                ) {
+                    HomeSession.reset()
+                }
+            }
+            null -> {
+                delay(1500)
+                val itemMissing = DownloadManager.items.value.none { it.id == trackedId }
+                if (itemMissing &&
+                    HomeSession.activeDownloadId == trackedId &&
+                    HomeSession.state is ResolveState.Success
+                ) {
+                    HomeSession.reset()
+                }
+            }
         }
     }
 
-    when (activeItem?.status) {
+    when (activeStatus) {
         null -> {
-            CircularProgressIndicator(
-                modifier = Modifier.size(32.dp),
-                strokeWidth = 3.dp,
-                color = MaterialTheme.colorScheme.primary,
-            )
+            val tracked = HomeSession.activeDownloadId
+            if (tracked == null || items.any { it.id == tracked }) {
+                CircularProgressIndicator(
+                    modifier = Modifier.size(32.dp),
+                    strokeWidth = 3.dp,
+                    color = MaterialTheme.colorScheme.primary,
+                )
+            }
         }
         DownloadStatus.COMPLETED -> AutoDownloadCard(activeItem!!, completed = true)
         DownloadStatus.FAILED -> Text(
