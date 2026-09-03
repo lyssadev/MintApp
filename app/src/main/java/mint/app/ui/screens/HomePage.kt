@@ -2,6 +2,7 @@ package mint.app.ui.screens
 
 import android.content.ClipboardManager
 import android.content.Context
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
@@ -11,6 +12,12 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleIn
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -178,7 +185,17 @@ fun HomePage(modifier: Modifier = Modifier) {
                 keyboardActions = KeyboardActions(onSearch = { resolve(HomeSession.link) }),
                 trailingIcon = {
                     Row(verticalAlignment = Alignment.CenterVertically) {
-                        if (HomeSession.link.isNotBlank()) {
+                        AnimatedVisibility(
+                            visible = HomeSession.link.isNotBlank(),
+                            enter = fadeIn(animationSpec = tween(180)) + scaleIn(
+                                initialScale = 0.6f,
+                                animationSpec = tween(180, easing = FastOutSlowInEasing),
+                            ),
+                            exit = fadeOut(animationSpec = tween(140)) + scaleOut(
+                                targetScale = 0.6f,
+                                animationSpec = tween(140),
+                            ),
+                        ) {
                             IconButton(onClick = {
                                 HomeSession.link = ""
                                 HomeSession.reset()
@@ -216,41 +233,52 @@ fun HomePage(modifier: Modifier = Modifier) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             Spacer(modifier = Modifier.height(20.dp))
-            when (val current = HomeSession.state) {
-                ResolveState.Idle -> Unit
-                ResolveState.Loading -> {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(32.dp),
-                        strokeWidth = 3.dp,
-                        color = MaterialTheme.colorScheme.primary,
-                    )
-                }
-                is ResolveState.Error -> {
-                    Text(
-                        text = current.message,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.error,
-                    )
-                }
-                is ResolveState.Success -> {
-                    val info = current.info
-                    val allItems = info.imageOptions + info.gifOptions + info.videoOptions
-                    when {
-                        info.platform != "youtube" && (info.imageOptions.isNotEmpty() || info.gifOptions.isNotEmpty() || allItems.size > 1) -> MediaOptionsSection(
-                            info = info,
-                            onDownloadItem = { option -> startDownload(option, null) },
-                            onDownloadAll = {
-                                allItems.forEachIndexed { index, option ->
-                                    startDownload(option, index)
-                                }
-                            },
+            AnimatedContent(
+                targetState = HomeSession.state,
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(250, easing = FastOutSlowInEasing)) +
+                        slideInVertically(animationSpec = tween(250, easing = FastOutSlowInEasing)) { it / 20 }) togetherWith
+                        (fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)) +
+                            slideOutVertically(animationSpec = tween(200, easing = FastOutSlowInEasing)) { it / 20 })
+                },
+                label = "resolveState",
+            ) { state ->
+                when (state) {
+                    ResolveState.Idle -> Unit
+                    ResolveState.Loading -> {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(32.dp),
+                            strokeWidth = 3.dp,
+                            color = MaterialTheme.colorScheme.primary,
                         )
-                        info.platform == "youtube" -> StreamInfoCard(
-                            info = info,
-                            downloading = false,
-                            onOptionClick = { option -> startDownload(option, null) },
+                    }
+                    is ResolveState.Error -> {
+                        Text(
+                            text = state.message,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.error,
                         )
-                        else -> AutoDownloadFlow(info = info)
+                    }
+                    is ResolveState.Success -> {
+                        val info = state.info
+                        val allItems = info.imageOptions + info.gifOptions + info.videoOptions
+                        when {
+                            info.platform != "youtube" && (info.imageOptions.isNotEmpty() || info.gifOptions.isNotEmpty() || allItems.size > 1) -> MediaOptionsSection(
+                                info = info,
+                                onDownloadItem = { option -> startDownload(option, null) },
+                                onDownloadAll = {
+                                    allItems.forEachIndexed { index, option ->
+                                        startDownload(option, index)
+                                    }
+                                },
+                            )
+                            info.platform == "youtube" -> StreamInfoCard(
+                                info = info,
+                                downloading = false,
+                                onOptionClick = { option -> startDownload(option, null) },
+                            )
+                            else -> AutoDownloadFlow(info = info)
+                        }
                     }
                 }
             }

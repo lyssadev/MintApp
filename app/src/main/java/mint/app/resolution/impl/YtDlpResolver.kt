@@ -114,6 +114,8 @@ object YtDlpResolver : Resolver {
                 }
 
             val audioOptions = audioFormats
+                .filter { it.ext?.lowercase() == "m4a" }
+                .ifEmpty { audioFormats }
                 .sortedByDescending { it.tbr }
                 .map { format ->
                     val label = buildAudioLabel(format)
