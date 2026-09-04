@@ -71,6 +71,18 @@ object UpdateUiState {
             phase = Phase.InstallPermission(info)
             return
         }
+        download(context, info)
+    }
+
+    fun onActivityResumed(context: Context) {
+        val info = (phase as? Phase.InstallPermission)?.info ?: return
+        if (AppUpdater.canInstall(context)) {
+            download(context, info)
+        }
+    }
+
+    private fun download(context: Context, info: AppUpdater.ReleaseInfo) {
+        if (downloadJob?.isActive == true) return
         phase = Phase.Downloading(info)
         downloadProgress = 0f
         downloadJob = scope.launch {
