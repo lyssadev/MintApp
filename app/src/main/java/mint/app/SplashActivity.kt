@@ -14,33 +14,24 @@ import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.MutableTransitionState
-import androidx.compose.animation.core.animateFloat
-import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.Image
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
@@ -66,6 +57,7 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import mint.app.core.prefs.DownloadPreferences
+import mint.app.ui.components.IndeterminateProgressBar
 import mint.app.ui.theme.RobotoMonoMedium
 import mint.app.ui.theme.ThemeController
 import mint.app.ui.theme.applyThemeAwareEdgeToEdge
@@ -291,7 +283,7 @@ private fun SplashScreen(onFinished: () -> Unit) {
                 }
             }
             Spacer(modifier = Modifier.height(32.dp))
-            SplashProgressBar(
+            IndeterminateProgressBar(
                 modifier = Modifier.fillMaxWidth(0.5f),
             )
             Spacer(modifier = Modifier.height(24.dp))
@@ -301,40 +293,5 @@ private fun SplashScreen(onFinished: () -> Unit) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-    }
-}
-
-@Composable
-private fun SplashProgressBar(modifier: Modifier = Modifier) {
-    val transition = rememberInfiniteTransition(label = "splashProgress")
-    val progress by transition.animateFloat(
-        initialValue = 0f,
-        targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(durationMillis = 1500, easing = LinearEasing),
-        ),
-        label = "splashProgressFraction",
-    )
-
-    val barWidthFraction = 0.35f
-    val offsetFraction = -barWidthFraction + progress * (1f + barWidthFraction)
-
-    BoxWithConstraints(
-        modifier = modifier
-            .height(8.dp)
-            .clip(RoundedCornerShape(50)),
-    ) {
-        Box(
-            modifier = Modifier
-                .matchParentSize()
-                .background(MaterialTheme.colorScheme.surfaceContainer),
-        )
-        Box(
-            modifier = Modifier
-                .offset(x = maxWidth * offsetFraction)
-                .width(maxWidth * barWidthFraction)
-                .fillMaxHeight()
-                .background(MaterialTheme.colorScheme.primary),
-        )
     }
 }
