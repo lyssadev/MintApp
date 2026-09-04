@@ -6,6 +6,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
 import mint.app.core.update.AppUpdater
+import mint.app.core.update.UpdateUiState
 import mint.app.resolution.ResolverRegistry
 import mint.app.ui.MintApp
 import mint.app.ui.screens.HomeSession
@@ -34,6 +35,11 @@ class MainActivity : ComponentActivity() {
             }
         }
         handleIncomingIntent(intent)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        UpdateUiState.onActivityResumed(this)
     }
 
     override fun onNewIntent(intent: Intent) {
