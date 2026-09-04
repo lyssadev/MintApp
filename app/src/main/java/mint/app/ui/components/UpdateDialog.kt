@@ -11,7 +11,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -60,25 +59,21 @@ fun UpdateDialog() {
 
 @Composable
 private fun CheckingContent() {
-    val context = LocalContext.current
-    Row(
+    Column(
         modifier = Modifier.fillMaxWidth(),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        verticalAlignment = Alignment.CenterVertically,
+        verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        CircularProgressIndicator(modifier = Modifier.height(28.dp))
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = "Checking for updates",
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
-            Text(
-                text = "Looking for a newer version than v${BuildConfig.VERSION_NAME}",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        Text(
+            text = "Checking for updates",
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Text(
+            text = "Looking for a newer version than v${BuildConfig.VERSION_NAME}",
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        IndeterminateProgressBar(modifier = Modifier.fillMaxWidth())
     }
 }
 
@@ -200,7 +195,7 @@ private fun DownloadingContent(info: AppUpdater.ReleaseInfo) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         } else {
-            CircularProgressIndicator(modifier = Modifier.height(28.dp))
+            IndeterminateProgressBar(modifier = Modifier.fillMaxWidth())
             Text(
                 text = "Preparing download...",
                 style = MaterialTheme.typography.labelMedium,
@@ -223,7 +218,7 @@ private fun InstallPermissionContent(info: AppUpdater.ReleaseInfo) {
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
-            text = "Mint needs permission to install apps from this source to update to ${info.tagName}. Tap the button below, then allow it and come back to tap Update again.",
+            text = "Mint needs permission to install apps from this source to update to ${info.tagName}. Tap the button below and allow it; the update will continue automatically.",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
