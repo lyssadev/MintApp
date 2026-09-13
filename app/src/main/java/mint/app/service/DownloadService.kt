@@ -320,7 +320,6 @@ class DownloadService : Service() {
         request.addOption("--no-playlist")
         request.addOption("--merge-output-format", "mp4")
         request.addOption("--throttled-rate", "100K")
-        request.addOption("--hls-prefer-ffmpeg")
         request.addOption("--retries", "10")
         request.addOption("--fragment-retries", "10")
         extraHeaders.forEach { (k, v) -> request.addOption("--add-header", "$k: $v") }
@@ -331,8 +330,13 @@ class DownloadService : Service() {
         var lastBytes = 0L
         var lastTime = 0L
         var destFile: String? = null
+        val outputLines = StringBuilder()
         val callback: (Float, Long, String?) -> Unit = { progress, eta, line ->
             if (line != null) {
+                outputLines.append(line).append('\n')
+                if (outputLines.length > 1 shl 16) {
+                    outputLines.delete(0, (1 shl 14))
+                }
                 val destMatch = Regex("""\[download\] Destination:\s+(.+)""").find(line)
                 if (destMatch != null) destFile = destMatch.groupValues[1].trim()
                 val mergeMatch = Regex("""\[Merger\] Merging formats into\s+"(.+)"""").find(line)
@@ -367,7 +371,16 @@ class DownloadService : Service() {
         }
 
         Logger.d(TAG, "download: yt-dlp source=$sourceUrl formatSelector='$formatSelector'")
-        YoutubeDL.getInstance().execute(request, processId, callback)
+        try {
+            YoutubeDL.getInstance().execute(request, processId, callback)
+        } catch (e: Exception) {
+            Logger.e(
+                TAG,
+                "download: yt-dlp FAILED for $downloadId\nsource=$sourceUrl\nformatSelector='$formatSelector'\n" +
+                    "stderr:\n${outputLines}",
+            )
+            throw e
+        }
 
         val dest = destFile?.let { File(it) }?.takeIf { it.isFile }
         val fallback = tempDir.listFiles()
