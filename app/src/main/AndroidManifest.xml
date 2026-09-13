@@ -58,12 +58,21 @@
             android:name=".connection.InstagramLoginActivity"
             android:exported="false"
             android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|uiMode|smallestScreenSize|density"
             android:theme="@style/Theme.Mint" />
 
         <activity
             android:name=".connection.TikTokLoginActivity"
             android:exported="false"
             android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|uiMode|smallestScreenSize|density"
+            android:theme="@style/Theme.Mint" />
+
+        <activity
+            android:name=".connection.PinterestLoginActivity"
+            android:exported="false"
+            android:launchMode="singleTop"
+            android:configChanges="orientation|screenSize|keyboardHidden|screenLayout|uiMode|smallestScreenSize|density"
             android:theme="@style/Theme.Mint" />
 
         <service
