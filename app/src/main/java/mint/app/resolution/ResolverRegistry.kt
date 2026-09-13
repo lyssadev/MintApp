@@ -4,6 +4,7 @@ import android.content.Context
 import mint.app.core.model.MediaItem
 import mint.app.core.util.Logger
 import mint.app.resolution.impl.InstagramResolver
+import mint.app.resolution.impl.PinterestResolver
 import mint.app.resolution.impl.TikTokResolver
 import mint.app.resolution.impl.XResolver
 import mint.app.resolution.impl.YtDlpResolver
@@ -13,7 +14,13 @@ object ResolverRegistry {
 
     private const val TAG = "ResolverRegistry"
 
-    private val resolvers: List<Resolver> = listOf(InstagramResolver, TikTokResolver, XResolver, YtDlpResolver)
+    private val resolvers: List<Resolver> = listOf(
+        InstagramResolver,
+        TikTokResolver,
+        PinterestResolver,
+        XResolver,
+        YtDlpResolver,
+    )
 
     fun init(context: Context) {
         resolvers.forEach { resolver -> resolver.initialize(context) }
@@ -33,6 +40,10 @@ object ResolverRegistry {
             host == "twitter.com" -> true
             host.endsWith(".x.com") -> true
             host.endsWith(".twitter.com") -> true
+            host == "pin.it" -> true
+            host == "pinterest.com" -> true
+            host.endsWith(".pinterest.com") -> true
+            host.matches(Regex("""(^|\.)pinterest\.[a-z.]+$""")) -> true
             else -> false
         }
         Logger.d(TAG, "isSupported: url=$url host=$host supported=$supported")
@@ -42,7 +53,7 @@ object ResolverRegistry {
     suspend fun resolve(url: String): MediaItem {
         if (!isSupported(url)) {
             Logger.w(TAG, "resolve: unsupported link $url")
-            throw Exception("Unsupported link. Only YouTube, YouTube Music, Instagram, TikTok and X are supported.")
+            throw Exception("Unsupported link. Only YouTube, YouTube Music, Instagram, TikTok, X and Pinterest are supported.")
         }
         var lastError: Exception? = null
         for (resolver in resolvers) {
