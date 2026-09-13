@@ -57,6 +57,7 @@ import androidx.compose.ui.window.Dialog
 import io.github.lyxnx.compose.ui.tablericons.TablerIcons
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandGithub
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandInstagram
+import io.github.lyxnx.compose.ui.tablericons.outline.BrandPinterest
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandTiktok
 import io.github.lyxnx.compose.ui.tablericons.outline.Check
 import io.github.lyxnx.compose.ui.tablericons.outline.ChevronRight
@@ -71,6 +72,7 @@ import io.github.lyxnx.compose.ui.tablericons.outline.X
 import mint.app.BuildConfig
 import mint.app.R
 import mint.app.connection.InstagramLoginActivity
+import mint.app.connection.PinterestLoginActivity
 import mint.app.connection.TikTokLoginActivity
 import mint.app.core.prefs.ConnectionPreferences
 import mint.app.core.prefs.DownloadPreferences
@@ -516,6 +518,19 @@ private fun ConnectionsSection() {
                 ConnectionPreferences.clearTikTok(context)
             },
             unlinkMessage = "TikTok unlinked",
+        )
+        ConnectionCard(
+            title = "Pinterest",
+            subtitle = { linked ->
+                if (linked) "Linked · used for Pinterest downloads" else "Login to unlock full access"
+            },
+            icon = TablerIcons.Outline.BrandPinterest,
+            isLinked = { ConnectionPreferences.isPinterestLinked(context) },
+            loginActivityClass = PinterestLoginActivity::class.java,
+            onClear = {
+                ConnectionPreferences.clearPinterest(context)
+            },
+            unlinkMessage = "Pinterest unlinked",
         )
     }
 }
