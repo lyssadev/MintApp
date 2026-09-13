@@ -57,6 +57,7 @@ import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import mint.app.core.prefs.DownloadPreferences
+import mint.app.core.util.Logger
 import mint.app.ui.components.IndeterminateProgressBar
 import mint.app.ui.theme.RobotoMonoMedium
 import mint.app.ui.theme.ThemeController
@@ -78,6 +79,7 @@ class SplashActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        Logger.enabled = BuildConfig.DEBUG
         ThemeController.init(this)
         applyThemeAwareEdgeToEdge()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
