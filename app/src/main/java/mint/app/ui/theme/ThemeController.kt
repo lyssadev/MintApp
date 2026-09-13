@@ -17,6 +17,7 @@ object ThemeController {
     private const val KEY_MODE = "mode"
     private const val KEY_DYNAMIC = "dynamic_color"
     private const val KEY_AMOLED = "amoled"
+    private const val KEY_PRE_AMOLED_MODE = "pre_amoled_mode"
 
     var presetId by mutableStateOf(ThemePresets.DEFAULT_ID)
         private set
@@ -25,6 +26,8 @@ object ThemeController {
     var dynamicColor by mutableStateOf(false)
         private set
     var amoled by mutableStateOf(false)
+        private set
+    var preAmoledMode by mutableStateOf<ThemeMode?>(null)
         private set
 
     private var prefs: SharedPreferences? = null
@@ -42,6 +45,8 @@ object ThemeController {
             ?: ThemeMode.LIGHT
         dynamicColor = p.getBoolean(KEY_DYNAMIC, false)
         amoled = p.getBoolean(KEY_AMOLED, false)
+        preAmoledMode = p.getString(KEY_PRE_AMOLED_MODE, null)
+            ?.let { value -> runCatching { ThemeMode.valueOf(value) }.getOrNull() }
     }
 
     fun updatePreset(id: String) {
@@ -60,7 +65,19 @@ object ThemeController {
     }
 
     fun updateAmoled(value: Boolean) {
+        if (value == amoled) return
         amoled = value
+        if (value) {
+            if (!isDarkMode()) {
+                preAmoledMode = mode
+                mode = ThemeMode.DARK
+            }
+        } else {
+            preAmoledMode?.let { previous ->
+                if (mode == ThemeMode.DARK) mode = previous
+            }
+            preAmoledMode = null
+        }
         save()
     }
 
@@ -80,6 +97,7 @@ object ThemeController {
             ?.putString(KEY_MODE, mode.name)
             ?.putBoolean(KEY_DYNAMIC, dynamicColor)
             ?.putBoolean(KEY_AMOLED, amoled)
+            ?.putString(KEY_PRE_AMOLED_MODE, preAmoledMode?.name)
             ?.apply()
     }
 }
