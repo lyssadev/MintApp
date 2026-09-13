@@ -153,7 +153,13 @@ class DownloadService : Service() {
         val actualFile: File
 
         try {
-            if (imageUrl != null) {
+            val isHls = imageUrl != null && (imageUrl.contains(".m3u8") || formatId == "hls")
+            if (isHls) {
+                Logger.d(TAG, "download: hls source, muxing via yt-dlp url=$imageUrl")
+                actualFile = muxHlsViaYtDlp(
+                    downloadId, imageUrl!!, title, estimatedSize, thumbnailUrl, tempDir, tempBase,
+                )
+            } else if (imageUrl != null) {
                 Logger.d(TAG, "download: direct url=$imageUrl headers=${httpHeaders.size}")
                 val ext = safeExtension(imageUrl, format)
                 val imgFile = File(tempDir, "$tempBase.$ext")
@@ -186,6 +192,11 @@ class DownloadService : Service() {
                             conn.setRequestProperty("Origin", "https://www.instagram.com")
                         }
                     }
+                    originalUrl.contains("x.com") || originalUrl.contains("twitter.com") -> {
+                        if (!httpHeaders.containsKey("Referer")) {
+                            conn.setRequestProperty("Referer", "https://x.com/")
+                        }
+                    }
                 }
                 conn.connect()
                 val code = conn.responseCode
@@ -214,79 +225,10 @@ class DownloadService : Service() {
             } else if (originalUrl.contains("tiktok.com") || originalUrl.contains("tiktokv.com")) {
                 throw Exception("TikTok video URL missing from resolved data")
             } else {
-                tempDir.listFiles()
-                    ?.filter { it.isFile && it.name.startsWith(tempBase) }
-                    ?.forEach { it.delete() }
-                val formatSelector = if (formatId.isNotBlank()) {
-                    if (!hasAudio) "$formatId+bestaudio[ext=m4a]" else formatId
-                } else {
-                    ""
-                }
-                val request = YoutubeDLRequest(originalUrl)
-                if (formatSelector.isNotBlank()) {
-                    request.addOption("-f", formatSelector)
-                }
-                request.addOption("-o", File(tempDir, tempBase).absolutePath)
-                request.addOption("--no-mtime")
-                request.addOption("--no-playlist")
-                request.addOption("--merge-output-format", "mp4")
-                request.addOption("--throttled-rate", "100K")
-                request.addOption("--hls-prefer-ffmpeg")
-                request.addOption("--retries", "10")
-                request.addOption("--fragment-retries", "10")
-
-                val processId = "mint_$downloadId"
-                processIds[downloadId] = processId
-
-                var lastBytes = 0L
-                var lastTime = 0L
-                var destFile: String? = null
-                val callback: (Float, Long, String?) -> Unit = { progress, eta, line ->
-                    if (line != null) {
-                        val destMatch = Regex("""\[download\] Destination:\s+(.+)""").find(line)
-                        if (destMatch != null) destFile = destMatch.groupValues[1].trim()
-                        val mergeMatch = Regex("""\[Merger\] Merging formats into\s+"(.+)"""").find(line)
-                        if (mergeMatch != null) destFile = mergeMatch.groupValues[1].trim()
-                    }
-                    val isProcessing = line != null && (line.contains("Merger", true) ||
-                        line.contains("ffmpeg", true) ||
-                        line.contains("Converting", true) ||
-                        line.contains("Deleting", true) ||
-                        line.contains("Moving", true) ||
-                        line.contains("Fixup", true) ||
-                        line.contains("Embedding", true))
-                    if (isProcessing) {
-                        DownloadManager.updatePhase(downloadId, DownloadStatus.PROCESSING)
-                        NotificationHelper.notifyProcessing(this@DownloadService, downloadId, title, thumbnailUrl)
-                    } else {
-                        val p = progress.toFloat().coerceIn(0f, 100f)
-                        val percent = p.toInt()
-                        val downloaded = (p / 100.0 * estimatedSize).toLong().coerceAtLeast(0)
-                        val now = System.currentTimeMillis()
-                        val speed = if (lastTime > 0 && now > lastTime && downloaded >= lastBytes) {
-                            ((downloaded - lastBytes) * 1000 / (now - lastTime))
-                        } else {
-                            0L
-                        }
-                        lastBytes = downloaded
-                        lastTime = now
-                        Logger.d(TAG, "progress[$downloadId]: $percent% | eta: ${eta}s")
-                        DownloadManager.updateProgress(downloadId, percent, downloaded, estimatedSize, speed)
-                        NotificationHelper.updateProgress(this@DownloadService, downloadId, percent, title, thumbnailUrl)
-                    }
-                }
-
-                Logger.d(TAG, "download: yt-dlp formatSelector='$formatSelector'")
-                YoutubeDL.getInstance().execute(request, processId, callback)
-
-                val dest = destFile?.let { File(it) }?.takeIf { it.isFile }
-                val fallback = tempDir.listFiles()
-                    ?.filter { it.isFile && it.name.startsWith(tempBase) && !it.name.endsWith(".part") }
-                    ?.filterNot { it.name.contains(Regex("\\.f\\d+")) }
-                    ?.maxByOrNull { it.lastModified() }
-                actualFile = dest ?: fallback
-                    ?: throw Exception("downloaded file not found")
-                Logger.d(TAG, "download: yt-dlp done file=${actualFile.name} size=${actualFile.length()}")
+                actualFile = runYtDlp(
+                    downloadId, originalUrl, formatId, title, estimatedSize,
+                    hasAudio, thumbnailUrl, tempDir, tempBase,
+                )
             }
 
             val rawExt = actualFile.name.substringAfterLast('.', "").ifBlank { format }
@@ -323,6 +265,118 @@ class DownloadService : Service() {
             tempDir.listFiles()?.filter { it.name.startsWith(tempBase) }?.forEach { it.delete() }
             throw e
         }
+    }
+
+    private suspend fun muxHlsViaYtDlp(
+        downloadId: String,
+        hlsUrl: String,
+        title: String,
+        estimatedSize: Long,
+        thumbnailUrl: String?,
+        tempDir: File,
+        tempBase: String,
+    ): File = withContext(Dispatchers.IO) {
+        runYtDlp(
+            downloadId = downloadId,
+            sourceUrl = hlsUrl,
+            formatId = "",
+            title = title,
+            estimatedSize = estimatedSize,
+            hasAudio = true,
+            thumbnailUrl = thumbnailUrl,
+            tempDir = tempDir,
+            tempBase = tempBase,
+            extraHeaders = mapOf("Referer" to "https://x.com/"),
+        )
+    }
+
+    private suspend fun runYtDlp(
+        downloadId: String,
+        sourceUrl: String,
+        formatId: String,
+        title: String,
+        estimatedSize: Long,
+        hasAudio: Boolean,
+        thumbnailUrl: String?,
+        tempDir: File,
+        tempBase: String,
+        extraHeaders: Map<String, String> = emptyMap(),
+    ): File = withContext(Dispatchers.IO) {
+        tempDir.listFiles()
+            ?.filter { it.isFile && it.name.startsWith(tempBase) }
+            ?.forEach { it.delete() }
+        val formatSelector = if (formatId.isNotBlank()) {
+            if (!hasAudio) "$formatId+bestaudio[ext=m4a]" else formatId
+        } else {
+            ""
+        }
+        val request = YoutubeDLRequest(sourceUrl)
+        if (formatSelector.isNotBlank()) {
+            request.addOption("-f", formatSelector)
+        }
+        request.addOption("-o", File(tempDir, tempBase).absolutePath)
+        request.addOption("--no-mtime")
+        request.addOption("--no-playlist")
+        request.addOption("--merge-output-format", "mp4")
+        request.addOption("--throttled-rate", "100K")
+        request.addOption("--hls-prefer-ffmpeg")
+        request.addOption("--retries", "10")
+        request.addOption("--fragment-retries", "10")
+        extraHeaders.forEach { (k, v) -> request.addOption("--add-header", "$k: $v") }
+
+        val processId = "mint_$downloadId"
+        processIds[downloadId] = processId
+
+        var lastBytes = 0L
+        var lastTime = 0L
+        var destFile: String? = null
+        val callback: (Float, Long, String?) -> Unit = { progress, eta, line ->
+            if (line != null) {
+                val destMatch = Regex("""\[download\] Destination:\s+(.+)""").find(line)
+                if (destMatch != null) destFile = destMatch.groupValues[1].trim()
+                val mergeMatch = Regex("""\[Merger\] Merging formats into\s+"(.+)"""").find(line)
+                if (mergeMatch != null) destFile = mergeMatch.groupValues[1].trim()
+            }
+            val isProcessing = line != null && (line.contains("Merger", true) ||
+                line.contains("ffmpeg", true) ||
+                line.contains("Converting", true) ||
+                line.contains("Deleting", true) ||
+                line.contains("Moving", true) ||
+                line.contains("Fixup", true) ||
+                line.contains("Embedding", true))
+            if (isProcessing) {
+                DownloadManager.updatePhase(downloadId, DownloadStatus.PROCESSING)
+                NotificationHelper.notifyProcessing(this@DownloadService, downloadId, title, thumbnailUrl)
+            } else {
+                val p = progress.toFloat().coerceIn(0f, 100f)
+                val percent = p.toInt()
+                val downloaded = (p / 100.0 * estimatedSize).toLong().coerceAtLeast(0)
+                val now = System.currentTimeMillis()
+                val speed = if (lastTime > 0 && now > lastTime && downloaded >= lastBytes) {
+                    ((downloaded - lastBytes) * 1000 / (now - lastTime))
+                } else {
+                    0L
+                }
+                lastBytes = downloaded
+                lastTime = now
+                Logger.d(TAG, "progress[$downloadId]: $percent% | eta: ${eta}s")
+                DownloadManager.updateProgress(downloadId, percent, downloaded, estimatedSize, speed)
+                NotificationHelper.updateProgress(this@DownloadService, downloadId, percent, title, thumbnailUrl)
+            }
+        }
+
+        Logger.d(TAG, "download: yt-dlp source=$sourceUrl formatSelector='$formatSelector'")
+        YoutubeDL.getInstance().execute(request, processId, callback)
+
+        val dest = destFile?.let { File(it) }?.takeIf { it.isFile }
+        val fallback = tempDir.listFiles()
+            ?.filter { it.isFile && it.name.startsWith(tempBase) && !it.name.endsWith(".part") }
+            ?.filterNot { it.name.contains(Regex("\\.f\\d+")) }
+            ?.maxByOrNull { it.lastModified() }
+        val file = dest ?: fallback
+            ?: throw Exception("downloaded file not found")
+        Logger.d(TAG, "download: yt-dlp done file=${file.name} size=${file.length()}")
+        file
     }
 
     private fun startForegroundCompat(id: Int, notification: android.app.Notification) {
