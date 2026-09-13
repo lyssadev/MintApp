@@ -321,6 +321,7 @@ object PinterestResolver : Resolver {
         } else {
             "https://v1.pinimg.com/videos/iht/hls/$clean.m3u8"
         }
+        Logger.d(TAG, "hlsFromSignature: sig=$clean url=$url")
         return MediaFormat(
             label = "Video ${index + 1} · mp4 (HLS)",
             format = "mp4",
