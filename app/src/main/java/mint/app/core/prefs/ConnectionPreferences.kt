@@ -11,6 +11,8 @@ object ConnectionPreferences {
     private const val KEY_INSTAGRAM_USERNAME = "instagram_username"
     private const val KEY_TIKTOK_COOKIES = "tiktok_cookies"
     private const val KEY_TIKTOK_USERNAME = "tiktok_username"
+    private const val KEY_PINTEREST_COOKIES = "pinterest_cookies"
+    private const val KEY_PINTEREST_USERNAME = "pinterest_username"
 
     fun instagramCookies(context: Context): Map<String, String> {
         val raw = prefs(context).getString(KEY_INSTAGRAM_COOKIES, null) ?: return emptyMap()
@@ -77,6 +79,43 @@ object ConnectionPreferences {
 
     fun isTikTokLinked(context: Context): Boolean =
         tiktokCookies(context).containsKey("sid_tt")
+
+    fun pinterestCookies(context: Context): Map<String, String> {
+        val raw = prefs(context).getString(KEY_PINTEREST_COOKIES, null) ?: return emptyMap()
+        return runCatching {
+            val obj = JSONObject(raw)
+            obj.keys().asSequence().associateWith { obj.optString(it) }
+        }.getOrDefault(emptyMap())
+    }
+
+    fun savePinterestSession(context: Context, cookies: Map<String, String>) {
+        val obj = JSONObject()
+        cookies.forEach { (k, v) -> obj.put(k, v) }
+        prefs(context).edit()
+            .putString(KEY_PINTEREST_COOKIES, obj.toString())
+            .apply()
+    }
+
+    fun pinterestUsername(context: Context): String? =
+        prefs(context).getString(KEY_PINTEREST_USERNAME, null)?.takeIf { it.isNotBlank() }
+
+    fun setPinterestUsername(context: Context, username: String?) {
+        prefs(context).edit().putString(KEY_PINTEREST_USERNAME, username).apply()
+    }
+
+    fun clearPinterest(context: Context) {
+        prefs(context).edit()
+            .remove(KEY_PINTEREST_COOKIES)
+            .remove(KEY_PINTEREST_USERNAME)
+            .apply()
+    }
+
+    fun isPinterestLinked(context: Context): Boolean {
+        val cookies = pinterestCookies(context)
+        return cookies["_auth"] == "1" &&
+            cookies.containsKey("_pinterest_sess") &&
+            cookies.containsKey("csrftoken")
+    }
 
     private fun prefs(context: Context): SharedPreferences =
         context.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
