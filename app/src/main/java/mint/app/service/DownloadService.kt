@@ -155,9 +155,9 @@ class DownloadService : Service() {
         try {
             val isHls = imageUrl != null && (imageUrl.contains(".m3u8") || formatId == "hls")
             if (isHls) {
-                Logger.d(TAG, "download: hls source, muxing via yt-dlp url=$imageUrl")
+                Logger.d(TAG, "download: hls source, muxing via yt-dlp url=$imageUrl headers=${httpHeaders.size}")
                 actualFile = muxHlsViaYtDlp(
-                    downloadId, imageUrl!!, title, estimatedSize, thumbnailUrl, tempDir, tempBase,
+                    downloadId, imageUrl!!, title, estimatedSize, thumbnailUrl, tempDir, tempBase, httpHeaders,
                 )
             } else if (imageUrl != null) {
                 Logger.d(TAG, "download: direct url=$imageUrl headers=${httpHeaders.size}")
@@ -275,6 +275,7 @@ class DownloadService : Service() {
         thumbnailUrl: String?,
         tempDir: File,
         tempBase: String,
+        httpHeaders: Map<String, String>,
     ): File = withContext(Dispatchers.IO) {
         runYtDlp(
             downloadId = downloadId,
@@ -286,7 +287,7 @@ class DownloadService : Service() {
             thumbnailUrl = thumbnailUrl,
             tempDir = tempDir,
             tempBase = tempBase,
-            extraHeaders = mapOf("Referer" to "https://x.com/"),
+            extraHeaders = httpHeaders,
         )
     }
 
