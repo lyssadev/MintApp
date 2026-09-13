@@ -25,6 +25,7 @@ Currently supported platforms:
 - Instagram (reels, posts, stories)
 - TikTok (videos and photo posts)
 - X / Twitter (videos)
+- Pinterest (videos, images, gifs)
 
 More downloaders are coming soon.
 
