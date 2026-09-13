@@ -245,13 +245,8 @@ private fun AppearanceSection(onOpenThemePicker: () -> Unit) {
                     )
                 }
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
-                val effectiveDark = ThemePresets
-                    .resolve(ThemeController.presetId, ThemeController.isDarkMode())
-                    .isDark
                 Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .alpha(if (effectiveDark) 1f else 0.45f),
+                    modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(12.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
@@ -277,9 +272,8 @@ private fun AppearanceSection(onOpenThemePicker: () -> Unit) {
                         )
                     }
                     Switch(
-                        checked = ThemeController.amoled && effectiveDark,
+                        checked = ThemeController.amoled,
                         onCheckedChange = { checked -> ThemeController.updateAmoled(checked) },
-                        enabled = effectiveDark,
                     )
                 }
             }
