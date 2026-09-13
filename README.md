@@ -24,6 +24,7 @@ Currently supported platforms:
 - YouTube / YouTube Music
 - Instagram (reels, posts, stories)
 - TikTok (videos and photo posts)
+- X / Twitter (videos)
 
 More downloaders are coming soon.
 
