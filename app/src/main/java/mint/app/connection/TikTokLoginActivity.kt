@@ -25,6 +25,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -38,6 +41,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import mint.app.core.prefs.ConnectionPreferences
+import mint.app.core.util.ChromeDebug
+import mint.app.ui.components.IndeterminateProgressBar
 import mint.app.ui.theme.MintTheme
 import mint.app.ui.theme.ThemeController
 import mint.app.ui.theme.applyThemeAwareEdgeToEdge
@@ -47,11 +52,13 @@ class TikTokLoginActivity : ComponentActivity() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     private var pollJob: Job? = null
     private var finished = false
+    private var loading by mutableStateOf(true)
     private val ua = "Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.6613.127 Mobile Safari/537.36"
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         ThemeController.init(this)
+        ChromeDebug.init()
         applyThemeAwareEdgeToEdge()
 
         val webView = buildWebView()
@@ -59,15 +66,21 @@ class TikTokLoginActivity : ComponentActivity() {
         CookieManager.getInstance().removeAllCookies(null)
 
         webView.webViewClient = object : WebViewClient() {
+            override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
+                super.onPageStarted(view, url, favicon)
+                loading = true
+            }
+
             override fun onPageFinished(view: WebView?, url: String?) {
                 super.onPageFinished(view, url)
+                loading = false
                 checkCookies()
             }
         }
 
         setContent {
             MintTheme {
-                LoginScreen(webView = webView, onClose = { finish() })
+                LoginScreen(webView = webView, loading = loading, onClose = { cancelLogin() })
             }
         }
 
@@ -91,6 +104,16 @@ class TikTokLoginActivity : ComponentActivity() {
         settings.userAgentString = ua
         settings.loadWithOverviewMode = true
         settings.useWideViewPort = true
+    }
+
+    private fun cancelLogin() {
+        if (finished) return
+        Toast.makeText(this, "Login cancelled", Toast.LENGTH_SHORT).show()
+        finish()
+    }
+
+    override fun onBackPressed() {
+        cancelLogin()
     }
 
     private fun checkCookies() {
@@ -124,7 +147,7 @@ class TikTokLoginActivity : ComponentActivity() {
 }
 
 @Composable
-private fun LoginScreen(webView: WebView, onClose: () -> Unit) {
+private fun LoginScreen(webView: WebView, loading: Boolean, onClose: () -> Unit) {
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -150,6 +173,12 @@ private fun LoginScreen(webView: WebView, onClose: () -> Unit) {
                 text = "TikTok Login",
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+        if (loading) {
+            IndeterminateProgressBar(
+                modifier = Modifier.fillMaxWidth(),
+                rounded = false,
             )
         }
         Box(
