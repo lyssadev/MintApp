@@ -228,7 +228,7 @@ fun HomePage(modifier: Modifier = Modifier) {
             )
             Spacer(modifier = Modifier.height(12.dp))
             Text(
-                text = "We support YouTube, Instagram, TikTok & X. More soon!",
+                text = "We support YouTube, Instagram, TikTok, X & Pinterest. More soon!",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
