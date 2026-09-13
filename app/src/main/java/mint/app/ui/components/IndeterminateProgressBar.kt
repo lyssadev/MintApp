@@ -21,7 +21,10 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 
 @Composable
-fun IndeterminateProgressBar(modifier: Modifier = Modifier) {
+fun IndeterminateProgressBar(
+    modifier: Modifier = Modifier,
+    rounded: Boolean = true,
+) {
     val transition = rememberInfiniteTransition(label = "indeterminateProgress")
     val progress by transition.animateFloat(
         initialValue = 0f,
@@ -34,11 +37,12 @@ fun IndeterminateProgressBar(modifier: Modifier = Modifier) {
 
     val barWidthFraction = 0.35f
     val offsetFraction = -barWidthFraction + progress * (1f + barWidthFraction)
+    val shape = if (rounded) RoundedCornerShape(50) else RoundedCornerShape(0.dp)
 
     BoxWithConstraints(
         modifier = modifier
             .height(8.dp)
-            .clip(RoundedCornerShape(50)),
+            .clip(shape),
     ) {
         Box(
             modifier = Modifier
