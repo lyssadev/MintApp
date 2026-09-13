@@ -5,7 +5,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -124,12 +124,12 @@ private fun AvailableContent(info: AppUpdater.ReleaseInfo, fromAuto: Boolean) {
         )
         if (info.body.isNotBlank()) {
             Text(
-                text = info.body.take(400),
+                text = info.body,
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(96.dp)
+                    .heightIn(min = 120.dp, max = 280.dp)
                     .verticalScroll(rememberScrollState()),
             )
         }
