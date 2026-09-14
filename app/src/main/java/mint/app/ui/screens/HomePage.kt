@@ -69,6 +69,7 @@ import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -91,6 +92,7 @@ import mint.app.core.model.DownloadItem
 import mint.app.core.model.DownloadStatus
 import mint.app.core.model.MediaFormat
 import mint.app.core.model.MediaItem
+import mint.app.R
 import mint.app.service.DownloadService
 import mint.app.resolution.ResolverRegistry
 import mint.app.ui.components.IndeterminateProgressBar
@@ -111,7 +113,7 @@ object HomeSession {
     var activeDownloadId by mutableStateOf<String?>(null)
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
-    fun resolveUrl(url: String) {
+    fun resolveUrl(url: String, fallbackError: String) {
         link = url
         activeDownloadId = null
         state = ResolveState.Loading
@@ -119,7 +121,7 @@ object HomeSession {
             state = try {
                 ResolveState.Success(ResolverRegistry.resolve(url))
             } catch (e: Exception) {
-                ResolveState.Error(e.message ?: "Couldn't resolve link")
+                ResolveState.Error(e.message ?: fallbackError)
             }
         }
     }
@@ -297,7 +299,7 @@ private fun HomeHero() {
     val resolve: (String) -> Unit = { url ->
         val trimmed = url.trim()
         if (trimmed.isNotEmpty()) {
-            HomeSession.resolveUrl(trimmed)
+            HomeSession.resolveUrl(trimmed, context.getString(R.string.home_error_resolve))
         }
     }
 
@@ -308,11 +310,10 @@ private fun HomeHero() {
             value = HomeSession.link,
             onValueChange = { HomeSession.link = it },
             modifier = Modifier.fillMaxWidth(),
-            placeholder = {
-                Text(
-                    text = "Paste link here...",
-                    style = MaterialTheme.typography.bodyMedium,
-                )
+            placeholder = {                    Text(
+                        text = stringResource(R.string.home_link_placeholder),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
             },
             singleLine = true,
             shape = RoundedCornerShape(16.dp),
@@ -334,10 +335,9 @@ private fun HomeHero() {
                         IconButton(onClick = {
                             HomeSession.link = ""
                             HomeSession.reset()
-                        }) {
-                            Icon(
-                                imageVector = TablerIcons.Outline.X,
-                                contentDescription = "Clear link",
+                        }) {                                        Icon(
+                                            imageVector = TablerIcons.Outline.X,
+                                            contentDescription = stringResource(R.string.cd_clear_link),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                 modifier = Modifier.size(20.dp),
                             )
@@ -350,10 +350,9 @@ private fun HomeHero() {
                             HomeSession.link = text
                             resolve(text)
                         }
-                    }) {
-                        Icon(
-                            imageVector = TablerIcons.Outline.Clipboard,
-                            contentDescription = "Paste from clipboard",
+                    }) {                                        Icon(
+                                            imageVector = TablerIcons.Outline.Clipboard,
+                                            contentDescription = stringResource(R.string.cd_paste_clipboard),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp),
                         )
@@ -369,13 +368,13 @@ private fun HomeHero() {
         )
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(
-                text = "We support YouTube, Instagram, TikTok, X & Pinterest.",
+                text = stringResource(R.string.home_supported_platforms),
                 style = MaterialTheme.typography.labelMedium,
                 color = subtleColor,
                 textAlign = TextAlign.Center,
             )
             Text(
-                text = "More soon!",
+                text = stringResource(R.string.home_more_soon),
                 style = MaterialTheme.typography.labelMedium,
                 fontWeight = FontWeight.SemiBold,
                 color = subtleColor,
@@ -482,7 +481,7 @@ private fun ShimmerTitle() {
     }
 
     Text(
-        text = "Mint",
+        text = stringResource(R.string.home_title),
         style = titleStyle,
         onTextLayout = { textWidthPx = it.size.width.toFloat() },
     )
@@ -516,7 +515,7 @@ private fun MediaOptionsSection(
                     color = MaterialTheme.colorScheme.primaryContainer,
                 ) {
                     Text(
-                        text = "Download all (${allItems.size})",
+                        text = stringResource(R.string.action_download_all, allItems.size),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onPrimaryContainer,
                         modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
@@ -578,7 +577,7 @@ private fun MediaOptionsSection(
                                 modifier = Modifier.size(14.dp),
                             )
                             Text(
-                                text = "Download",
+                                text = stringResource(R.string.action_download),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onPrimaryContainer,
                             )
@@ -702,10 +701,10 @@ private fun AutoDownloadCard(item: DownloadItem, completed: Boolean) {
                 )
                 Text(
                     text = when {
-                        completed -> "Download complete"
-                        item.status == DownloadStatus.PREPARING -> "Preparing..."
-                        item.status == DownloadStatus.PROCESSING -> "Processing..."
-                        else -> "Downloading ${item.progress}%"
+                        completed -> stringResource(R.string.downloads_status_complete)
+                        item.status == DownloadStatus.PREPARING -> stringResource(R.string.downloads_status_preparing)
+                        item.status == DownloadStatus.PROCESSING -> stringResource(R.string.downloads_status_processing)
+                        else -> stringResource(R.string.downloads_status_downloading, item.progress)
                     },
                     style = MaterialTheme.typography.bodyMedium,
                     color = if (completed) {
@@ -719,13 +718,12 @@ private fun AutoDownloadCard(item: DownloadItem, completed: Boolean) {
                     IconButton(
                         onClick = { DownloadService.cancel(item.id) },
                         modifier = Modifier.size(22.dp),
-                    ) {
-                        Icon(
-                            imageVector = TablerIcons.Outline.X,
-                            contentDescription = "Cancel download",
-                            tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.size(16.dp),
-                        )
+                    ) {                            Icon(
+                                imageVector = TablerIcons.Outline.X,
+                                contentDescription = stringResource(R.string.cd_cancel_download),
+                                tint = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.size(16.dp),
+                            )
                     }
                 }
             }
