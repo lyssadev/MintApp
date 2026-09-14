@@ -27,11 +27,15 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.Button
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -548,59 +552,79 @@ private fun LanguageSection() {
     }
 
     if (pickerOpen) {
-        AlertDialog(
-            onDismissRequest = { pickerOpen = false },
-            title = { Text(stringResource(R.string.settings_language)) },
-            text = {
-                Column {
-                    AppLocale.SUPPORTED.forEach { (tag, locale) ->
-                        val label = if (locale == null) {
-                            stringResource(R.string.language_system)
-                        } else {
-                            locale.displayName
-                        }
-                        val selected = tag == current
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(10.dp))
-                                .clickable {
-                                    pickerOpen = false
-                                    if (tag != current) {
-                                        LanguagePreferences.setLanguage(context, tag)
-                                        activity?.recreate()
-                                    }
-                                }
-                                .padding(horizontal = 8.dp, vertical = 12.dp),
-                            horizontalArrangement = Arrangement.spacedBy(12.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            if (selected) {
-                                Icon(
-                                    imageVector = TablerIcons.Outline.Check,
-                                    contentDescription = stringResource(R.string.cd_selected),
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp),
-                                )
+        Dialog(onDismissRequest = { pickerOpen = false }) {
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(28.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            ) {
+                Column(modifier = Modifier.padding(20.dp)) {
+                    Text(
+                        text = stringResource(R.string.settings_language),
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.padding(bottom = 12.dp),
+                    )
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 360.dp)
+                            .verticalScroll(rememberScrollState()),
+                    ) {
+                        AppLocale.SUPPORTED.forEach { (tag, locale) ->
+                            val label = if (locale == null) {
+                                stringResource(R.string.language_system)
                             } else {
-                                Spacer(modifier = Modifier.size(18.dp))
+                                locale.displayName
                             }
-                            Text(
-                                text = label,
-                                style = MaterialTheme.typography.bodyLarge,
-                                color = if (selected) {
-                                    MaterialTheme.colorScheme.primary
+                            val selected = tag == current
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(12.dp))
+                                    .clickable {
+                                        pickerOpen = false
+                                        if (tag != current) {
+                                            LanguagePreferences.setLanguage(context, tag)
+                                            activity?.recreate()
+                                        }
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                if (selected) {
+                                    Icon(
+                                        imageVector = TablerIcons.Outline.Check,
+                                        contentDescription = stringResource(R.string.cd_selected),
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp),
+                                    )
                                 } else {
-                                    MaterialTheme.colorScheme.onSurface
-                                },
-                            )
+                                    Spacer(modifier = Modifier.size(18.dp))
+                                }
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = if (selected) {
+                                        MaterialTheme.colorScheme.primary
+                                    } else {
+                                        MaterialTheme.colorScheme.onSurface
+                                    },
+                                )
+                            }
                         }
                     }
+                    Spacer(modifier = Modifier.height(16.dp))
+                    Button(
+                        onClick = { pickerOpen = false },
+                        modifier = Modifier.fillMaxWidth(),
+                    ) {
+                        Text(stringResource(R.string.cd_close))
+                    }
                 }
-            },
-            confirmButton = {},
-            dismissButton = {},
-        )
+            }
+        }
     }
 }
 
