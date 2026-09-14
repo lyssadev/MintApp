@@ -20,10 +20,12 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import mint.app.BuildConfig
+import mint.app.R
 import mint.app.core.update.AppUpdater
 import mint.app.core.update.UpdateUiState
 import java.util.Locale
@@ -64,12 +66,12 @@ private fun CheckingContent() {
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(
-            text = "Checking for updates",
+            text = stringResource(R.string.update_checking),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
-            text = "Looking for a newer version than v${BuildConfig.VERSION_NAME}",
+            text = stringResource(R.string.update_checking_detail, BuildConfig.VERSION_NAME),
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -86,12 +88,12 @@ private fun UpToDateContent() {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = "You're up to date",
+            text = stringResource(R.string.update_up_to_date),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
-            text = "v${BuildConfig.VERSION_NAME} is the latest version",
+            text = stringResource(R.string.update_up_to_date_detail, BuildConfig.VERSION_NAME),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -101,7 +103,7 @@ private fun UpToDateContent() {
         onClick = { UpdateUiState.dismiss() },
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Text("OK")
+        Text(stringResource(R.string.action_ok))
     }
 }
 
@@ -113,12 +115,12 @@ private fun AvailableContent(info: AppUpdater.ReleaseInfo, fromAuto: Boolean) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = "Update available",
+            text = stringResource(R.string.update_available),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
-            text = "${info.name} (${info.tagName}) is available. You're on v${BuildConfig.VERSION_NAME}.",
+            text = stringResource(R.string.update_available_detail, info.name, info.tagName, BuildConfig.VERSION_NAME),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -135,7 +137,7 @@ private fun AvailableContent(info: AppUpdater.ReleaseInfo, fromAuto: Boolean) {
         }
         if (info.apkSize > 0) {
             Text(
-                text = "Size: ${formatSize(info.apkSize)}",
+                text = stringResource(R.string.update_size, formatSize(info.apkSize)),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -155,13 +157,13 @@ private fun AvailableContent(info: AppUpdater.ReleaseInfo, fromAuto: Boolean) {
             },
             modifier = Modifier.weight(1f),
         ) {
-            Text(if (fromAuto) "Remind me later" else "Cancel")
+            Text(if (fromAuto) stringResource(R.string.action_remind_later) else stringResource(R.string.action_cancel))
         }
         Button(
             onClick = { UpdateUiState.startUpdate(context) },
             modifier = Modifier.weight(1f),
         ) {
-            Text("Update")
+            Text(stringResource(R.string.action_update))
         }
     }
 }
@@ -174,7 +176,7 @@ private fun DownloadingContent(info: AppUpdater.ReleaseInfo) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = "Downloading update",
+            text = stringResource(R.string.update_downloading),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )
@@ -197,7 +199,7 @@ private fun DownloadingContent(info: AppUpdater.ReleaseInfo) {
         } else {
             IndeterminateProgressBar(modifier = Modifier.fillMaxWidth())
             Text(
-                text = "Preparing download...",
+                text = stringResource(R.string.update_preparing),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -213,12 +215,12 @@ private fun InstallPermissionContent(info: AppUpdater.ReleaseInfo) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = "Install permission required",
+            text = stringResource(R.string.update_install_permission_title),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )
         Text(
-            text = "Mint needs permission to install apps from this source to update to ${info.tagName}. Tap the button below and allow it; the update will continue automatically.",
+            text = stringResource(R.string.update_install_permission_message, info.tagName),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -231,13 +233,13 @@ private fun InstallPermissionContent(info: AppUpdater.ReleaseInfo) {
             onClick = { UpdateUiState.dismiss() },
             modifier = Modifier.weight(1f),
         ) {
-            Text("Cancel")
+            Text(stringResource(R.string.action_cancel))
         }
         Button(
             onClick = { UpdateUiState.openInstallSettings(context) },
             modifier = Modifier.weight(1f),
         ) {
-            Text("Open settings")
+            Text(stringResource(R.string.action_open_settings))
         }
     }
 }
@@ -250,7 +252,7 @@ private fun ErrorContent(message: String) {
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         Text(
-            text = "Update failed",
+            text = stringResource(R.string.update_failed),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurface,
         )
@@ -265,7 +267,7 @@ private fun ErrorContent(message: String) {
         onClick = { UpdateUiState.dismiss() },
         modifier = Modifier.fillMaxWidth(),
     ) {
-        Text("Close")
+        Text(stringResource(R.string.cd_close))
     }
 }
 
