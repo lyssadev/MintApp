@@ -39,6 +39,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -50,6 +51,7 @@ import io.github.lyxnx.compose.ui.tablericons.outline.Trash
 import io.github.lyxnx.compose.ui.tablericons.outline.X
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import mint.app.R
 import mint.app.core.manager.DownloadManager
 import mint.app.core.model.DownloadItem
 import mint.app.core.model.DownloadStatus
@@ -89,7 +91,7 @@ fun DownloadsScreen(modifier: Modifier = Modifier) {
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Text(
-                text = "Downloads",
+                text = stringResource(R.string.downloads_title),
                 style = MaterialTheme.typography.titleLarge.copy(
                     fontFamily = RobotoMonoMedium,
                     fontWeight = FontWeight.Medium,
@@ -102,7 +104,7 @@ fun DownloadsScreen(modifier: Modifier = Modifier) {
                 IconButton(onClick = { pendingDeleteAll = true }) {
                     Icon(
                         imageVector = TablerIcons.Outline.Trash,
-                        contentDescription = "Delete all",
+                        contentDescription = stringResource(R.string.cd_delete_all),
                         tint = MaterialTheme.colorScheme.error,
                         modifier = Modifier.size(24.dp),
                     )
@@ -112,7 +114,7 @@ fun DownloadsScreen(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(28.dp))
 
         if (activeItems.isNotEmpty()) {
-            SectionHeader("In progress")
+            SectionHeader(stringResource(R.string.downloads_section_in_progress))
             Spacer(modifier = Modifier.height(12.dp))
             activeItems.forEach { item ->
                 ActiveDownloadCard(item = item)
@@ -122,7 +124,7 @@ fun DownloadsScreen(modifier: Modifier = Modifier) {
         }
 
         if (failedItems.isNotEmpty()) {
-            SectionHeader("Failed")
+            SectionHeader(stringResource(R.string.downloads_section_failed))
             Spacer(modifier = Modifier.height(12.dp))
             failedItems.forEach { item ->
                 FailedDownloadCard(
@@ -134,11 +136,11 @@ fun DownloadsScreen(modifier: Modifier = Modifier) {
             Spacer(modifier = Modifier.height(24.dp))
         }
 
-        SectionHeader("Completed")
+        SectionHeader(stringResource(R.string.downloads_section_completed))
         Spacer(modifier = Modifier.height(12.dp))
         if (completedItems.isEmpty()) {
             Text(
-                text = "No downloads yet",
+                text = stringResource(R.string.downloads_empty),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -157,19 +159,19 @@ fun DownloadsScreen(modifier: Modifier = Modifier) {
     pendingDelete?.let { item ->
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
-            title = { Text("Delete download?") },
-            text = { Text("\"${item.fileName}\" will be permanently removed from your device.") },
+            title = { Text(stringResource(R.string.downloads_delete_single_title)) },
+            text = { Text(stringResource(R.string.downloads_delete_single_message, item.fileName)) },
             confirmButton = {
                 TextButton(onClick = {
                     deleteEntry(context, item)
                     pendingDelete = null
                 }) {
-                    Text("Delete", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.action_delete), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { pendingDelete = null }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
         )
@@ -178,19 +180,19 @@ fun DownloadsScreen(modifier: Modifier = Modifier) {
     if (pendingDeleteAll) {
         AlertDialog(
             onDismissRequest = { pendingDeleteAll = false },
-            title = { Text("Delete all?") },
-            text = { Text("All ${completedItems.size + failedItems.size} completed and failed downloads, including their files, will be permanently removed from your device.") },
+            title = { Text(stringResource(R.string.downloads_delete_all_title)) },
+            text = { Text(stringResource(R.string.downloads_delete_all_message, completedItems.size + failedItems.size)) },
             confirmButton = {
                 TextButton(onClick = {
                     deleteAllEntries(context)
                     pendingDeleteAll = false
                 }) {
-                    Text("Delete all", color = MaterialTheme.colorScheme.error)
+                    Text(stringResource(R.string.cd_delete_all), color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { pendingDeleteAll = false }) {
-                    Text("Cancel")
+                    Text(stringResource(R.string.action_cancel))
                 }
             },
         )
@@ -268,8 +270,8 @@ private fun ActiveDownloadCard(item: DownloadItem) {
                 )
                 Text(
                     text = when (item.status) {
-                        DownloadStatus.PREPARING -> "Preparing..."
-                        DownloadStatus.PROCESSING -> "Processing..."
+                        DownloadStatus.PREPARING -> stringResource(R.string.downloads_status_preparing)
+                        DownloadStatus.PROCESSING -> stringResource(R.string.downloads_status_processing)
                         DownloadStatus.DOWNLOADING ->
                             "${item.progress}% · ${formatBytes(item.downloadedBytes)} / ${formatBytes(item.totalBytes)}"
                         else -> ""
@@ -286,13 +288,12 @@ private fun ActiveDownloadCard(item: DownloadItem) {
                     LinearProgressIndicator(modifier = Modifier.fillMaxWidth())
                 }
             }
-            IconButton(onClick = { DownloadService.cancelBroadcast(context, item.id) }) {
-                Icon(
-                    imageVector = TablerIcons.Outline.X,
-                    contentDescription = "Cancel download",
-                    tint = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.size(20.dp),
-                )
+            IconButton(onClick = { DownloadService.cancelBroadcast(context, item.id) }) {                    Icon(
+                        imageVector = TablerIcons.Outline.X,
+                        contentDescription = stringResource(R.string.cd_cancel_download),
+                        tint = MaterialTheme.colorScheme.error,
+                        modifier = Modifier.size(20.dp),
+                    )
             }
         }
     }
@@ -396,7 +397,7 @@ private fun CompletedDownloadCard(
                 )
                 if (!fileExists) {
                     Text(
-                        text = "File deleted",
+                        text = stringResource(R.string.downloads_file_deleted),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -423,7 +424,7 @@ private fun CompletedDownloadCard(
                     IconButton(onClick = { locateFile(context, item) }) {
                         Icon(
                             imageVector = TablerIcons.Outline.Folder,
-                            contentDescription = "Locate download",
+                            contentDescription = stringResource(R.string.cd_locate_download),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                             modifier = Modifier.size(20.dp),
                         )
@@ -431,7 +432,7 @@ private fun CompletedDownloadCard(
                     IconButton(onClick = onDelete) {
                         Icon(
                             imageVector = TablerIcons.Outline.Trash,
-                            contentDescription = "Delete download",
+                            contentDescription = stringResource(R.string.cd_delete_download),
                             tint = MaterialTheme.colorScheme.error,
                             modifier = Modifier.size(20.dp),
                         )
