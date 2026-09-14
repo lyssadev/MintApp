@@ -167,11 +167,23 @@ fun HomePage(
         modifier = modifier,
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val isLandscape = maxWidth > maxHeight && !compact
+            val isLandscape = maxWidth > maxHeight
             val hasContent = HomeSession.state != ResolveState.Idle
+            val screenHeight = maxHeight
+            val useSplit = isLandscape && !compact
 
-            if (isLandscape) {
-                val split by animateFloatAsState(
+            AnimatedContent(
+                targetState = useSplit,
+                transitionSpec = {
+                    (fadeIn(animationSpec = tween(300, easing = FastOutSlowInEasing)) +
+                        scaleIn(initialScale = 0.985f, animationSpec = tween(300, easing = FastOutSlowInEasing))) togetherWith
+                        (fadeOut(animationSpec = tween(300, easing = FastOutSlowInEasing)) +
+                            scaleOut(targetScale = 0.985f, animationSpec = tween(300, easing = FastOutSlowInEasing)))
+                },
+                label = "homeLayoutMode",
+            ) { split ->
+                if (split) {
+                    val splitWeight by animateFloatAsState(
                     targetValue = if (hasContent) 1f else 0.001f,
                     animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
                     label = "landscapeSplit",
@@ -181,7 +193,7 @@ fun HomePage(
                         .fillMaxSize()
                         .padding(horizontal = if (compact) 24.dp else 40.dp),
                 ) {
-                    Box(modifier = Modifier.weight(split)) {
+                    Box(modifier = Modifier.weight(splitWeight)) {
                         Column(
                             modifier = Modifier
                                 .fillMaxSize()
@@ -242,7 +254,7 @@ fun HomePage(
                 val heroHeight = with(density) { heroHeightPx.toDp() }
 
                 val bottomReserve = 140.dp
-                val centeredTop = ((maxHeight - bottomReserve - heroHeight) / 2).coerceAtLeast(24.dp)
+                val centeredTop = ((screenHeight - bottomReserve - heroHeight) / 2).coerceAtLeast(24.dp)
 
                 val heroTopPadding by animateDpAsState(
                     targetValue = if (hasContent) 56.dp else centeredTop,
@@ -271,6 +283,7 @@ fun HomePage(
                     Spacer(modifier = Modifier.height(20.dp))
                     ResolveResult(startDownload = startDownload)
                     Spacer(modifier = Modifier.height(120.dp))
+                }
                 }
             }
         }
