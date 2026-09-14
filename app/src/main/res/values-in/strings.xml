@@ -1,0 +1,154 @@
+<resources>
+    <string name="app_name">Mint</string>
+
+    <!-- Generic actions -->
+    <string name="action_cancel">Batal</string>
+    <string name="action_delete">Hapus</string>
+    <string name="action_close">Tutup</string>
+    <string name="action_ok">OK</string>
+    <string name="action_update">Perbarui</string>
+    <string name="action_link">Hubungkan</string>
+    <string name="action_unlink">Putuskan</string>
+    <string name="action_open_settings">Buka pengaturan</string>
+    <string name="action_download">Unduh</string>
+    <string name="action_download_all">Unduh semua (%1$d)</string>
+    <string name="action_remind_later">Ingatkan nanti</string>
+    <string name="action_continue">Lanjutkan</string>
+
+    <!-- Accessibility descriptions -->
+    <string name="cd_logo">Logo Mint</string>
+    <string name="cd_close">Tutup</string>
+    <string name="cd_clear_link">Hapus tautan</string>
+    <string name="cd_paste_clipboard">Tempel dari papan klip</string>
+    <string name="cd_cancel_download">Batalkan unduhan</string>
+    <string name="cd_delete_all">Hapus semua</string>
+    <string name="cd_delete_download">Hapus unduhan</string>
+    <string name="cd_locate_download">Buka lokasi unduhan</string>
+    <string name="cd_selected">Dipilih</string>
+
+    <!-- Home -->
+    <string name="home_title">Mint</string>
+    <string name="home_link_placeholder">Tempel tautan di sini...</string>
+    <string name="home_supported_platforms">Mendukung YouTube, Instagram, TikTok, X, dan Pinterest.</string>
+    <string name="home_more_soon">Segera hadir!</string>
+    <string name="home_error_resolve">Tautan tidak dapat diproses</string>
+
+    <string name="downloads_status_downloading">Mengunduh %1$d%%</string>
+    <string name="downloads_status_complete">Unduhan selesai</string>
+
+    <!-- Stream info card -->
+    <string name="stream_badge_video">Video</string>
+    <string name="stream_badge_audio">Audio</string>
+    <string name="stream_no_streams">Tidak ada stream yang bisa diunduh</string>
+
+    <!-- Downloads -->
+    <string name="downloads_title">Unduhan</string>
+    <string name="downloads_section_in_progress">Sedang berlangsung</string>
+    <string name="downloads_section_failed">Gagal</string>
+    <string name="downloads_section_completed">Selesai</string>
+    <string name="downloads_empty">Belum ada unduhan</string>
+    <string name="downloads_status_preparing">Menyiapkan...</string>
+    <string name="downloads_status_processing">Memproses...</string>
+    <string name="downloads_file_deleted">File dihapus</string>
+    <string name="downloads_delete_single_title">Hapus unduhan?</string>
+    <string name="downloads_delete_single_message">\"%1$s\" akan dihapus permanen dari perangkat Anda.</string>
+    <string name="downloads_delete_all_title">Hapus semua?</string>
+    <string name="downloads_delete_all_message">Semua %1$d unduhan yang selesai dan gagal, termasuk filenya, akan dihapus permanen dari perangkat Anda.</string>
+
+    <!-- Settings: appearance -->
+    <string name="settings_title">Pengaturan</string>
+    <string name="settings_subtitle">Sesuaikan aplikasi Anda</string>
+    <string name="settings_appearance">Tampilan</string>
+    <string name="settings_theme">Tema</string>
+    <string name="settings_theme_managed_material_you">Dikelola oleh Material You</string>
+    <string name="settings_theme_disable_amoled_first">Matikan AMOLED untuk mengubah tema</string>
+    <string name="settings_presets_available">%1$d tema tersedia</string>
+    <string name="settings_mode">Mode</string>
+    <string name="settings_mode_fixed">Mode (tetap untuk tema ini)</string>
+    <string name="settings_mode_light">Terang</string>
+    <string name="settings_mode_dark">Gelap</string>
+    <string name="settings_mode_system">Sistem</string>
+    <string name="settings_material_you">Material You</string>
+    <string name="settings_material_you_disable_amoled">Matikan AMOLED untuk memakai Material You</string>
+    <string name="settings_material_you_wallpaper">Warna dari wallpaper Anda</string>
+    <string name="settings_material_you_requires">Butuh Android 12 atau lebih baru</string>
+    <string name="settings_amoled">AMOLED</string>
+    <string name="settings_amoled_description">Latar hitam pekat di mode gelap</string>
+
+    <!-- Settings: connections -->
+    <string name="platform_instagram">Instagram</string>
+    <string name="platform_tiktok">TikTok</string>
+    <string name="platform_pinterest">Pinterest</string>
+    <string name="settings_connections">Akun</string>
+    <string name="settings_connection_linked">Terhubung · untuk unduhan %1$s</string>
+    <string name="settings_connection_login_hint">Masuk untuk membuka semua fitur</string>
+    <string name="settings_connection_unlinked_toast">%1$s terputus</string>
+
+    <!-- Settings: downloads -->
+    <string name="settings_downloads_section">Unduhan</string>
+    <string name="settings_download_folder">Folder unduhan</string>
+    <string name="settings_download_folder_hint">Folder utama di dalam /sdcard/Download/</string>
+    <string name="settings_videos_folder">Folder video</string>
+    <string name="settings_audios_folder">Folder audio</string>
+    <string name="settings_images_folder">Folder gambar</string>
+    <string name="settings_subfolder_placeholder">MintApp</string>
+    <string name="settings_videos_placeholder">videos</string>
+    <string name="settings_audios_placeholder">audios</string>
+    <string name="settings_images_placeholder">images</string>
+
+    <!-- Settings: language -->
+    <string name="settings_language">Bahasa</string>
+    <string name="settings_language_subtitle">Bahasa tampilan aplikasi</string>
+    <string name="language_system">Bawaan sistem</string>
+    <string name="language_en">English</string>
+    <string name="language_es">Español</string>
+    <string name="language_pt_br">Português (Brasil)</string>
+    <string name="language_fr">Français</string>
+    <string name="language_de">Deutsch</string>
+    <string name="language_ru">Русский</string>
+    <string name="language_in">Bahasa Indonesia</string>
+    <string name="language_ja">日本語</string>
+
+    <!-- Settings: about -->
+    <string name="settings_about">Tentang</string>
+    <string name="settings_app_version">v%1$s · oleh lyssadev</string>
+    <string name="settings_app_version_short">v%1$s</string>
+    <string name="settings_repository">Repositori</string>
+    <string name="settings_check_updates">Periksa pembaruan</string>
+    <string name="settings_check_updates_subtitle">Anda di v%1$s</string>
+
+    <!-- Update dialog -->
+    <string name="update_checking">Memeriksa pembaruan</string>
+    <string name="update_checking_detail">Mencari versi yang lebih baru dari v%1$s</string>
+    <string name="update_up_to_date">Anda sudah yang terbaru</string>
+    <string name="update_up_to_date_detail">v%1$s adalah versi terbaru</string>
+    <string name="update_available">Pembaruan tersedia</string>
+    <string name="update_available_detail">%1$s (%2$s) tersedia. Anda di v%3$s.</string>
+    <string name="update_size">Ukuran: %1$s</string>
+    <string name="update_downloading">Mengunduh pembaruan</string>
+    <string name="update_preparing">Menyiapkan unduhan...</string>
+    <string name="update_install_permission_title">Perlu izin pemasangan</string>
+    <string name="update_install_permission_message">Mint butuh izin untuk memasang aplikasi dari sumber ini agar bisa memperbarui ke %1$s. Ketuk tombol di bawah dan izinkan; pembaruan akan berlanjut otomatis.</string>
+    <string name="update_failed">Pembaruan gagal</string>
+
+    <!-- Splash / permissions -->
+    <string name="splash_permissions_title">Perlu izin</string>
+    <string name="splash_permissions_message">Mint butuh izin penyimpanan dan notifikasi untuk mengunduh file.</string>
+    <string name="splash_open_app_settings">Buka pengaturan</string>
+
+    <!-- Login screens -->
+    <string name="login_instagram_title">Masuk ke Instagram</string>
+    <string name="login_tiktok_title">Masuk ke TikTok</string>
+    <string name="login_pinterest_title">Masuk ke Pinterest</string>
+
+    <!-- Notifications -->
+    <string name="notif_channel_name">Unduhan</string>
+    <string name="notif_channel_description">Progres dan penyelesaian unduhan</string>
+    <string name="notif_downloading">Mengunduh...</string>
+    <string name="notif_processing">Memproses...</string>
+    <string name="notif_action_cancel">Batal</string>
+    <string name="notif_downloads_complete">Unduhan selesai</string>
+    <string name="notif_downloads_complete_count">%1$d file diunduh</string>
+    <string name="notif_more">+%1$d lainnya</string>
+    <string name="notif_download_failed">Unduhan gagal — %1$s</string>
+</resources>
