@@ -17,9 +17,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import mint.app.R
 import mint.app.core.model.MediaFormat
 import mint.app.core.model.MediaItem
 
@@ -112,7 +114,7 @@ fun StreamInfoCard(
             HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             if (info.videoOptions.isNotEmpty()) {
                 Text(
-                    text = "Video",
+                    text = stringResource(R.string.stream_badge_video),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -120,7 +122,7 @@ fun StreamInfoCard(
             }
             if (info.audioOptions.isNotEmpty()) {
                 Text(
-                    text = "Audio",
+                    text = stringResource(R.string.stream_badge_audio),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -128,7 +130,7 @@ fun StreamInfoCard(
             }
             if (info.videoOptions.isEmpty() && info.audioOptions.isEmpty()) {
                 Text(
-                    text = "No downloadable streams available",
+                    text = stringResource(R.string.stream_no_streams),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
