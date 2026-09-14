@@ -167,11 +167,9 @@ fun HomePage(modifier: Modifier = Modifier) {
             var heroHeightPx by remember { mutableStateOf(0f) }
             val heroHeight = with(density) { heroHeightPx.toDp() }
 
-            // Reserve room for the floating bottom bar so the hero centers in the visible area.
             val bottomReserve = 140.dp
             val centeredTop = ((maxHeight - bottomReserve - heroHeight) / 2).coerceAtLeast(24.dp)
 
-            // When content (cards) appears, the hero slides up smoothly to make room below.
             val heroTopPadding by animateDpAsState(
                 targetValue = if (hasContent) 56.dp else centeredTop,
                 animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
