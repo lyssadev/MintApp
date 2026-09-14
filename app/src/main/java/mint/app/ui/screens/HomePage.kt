@@ -4,31 +4,39 @@ import android.content.ClipboardManager
 import android.content.Context
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.scaleIn
 import androidx.compose.animation.scaleOut
+import androidx.compose.animation.shrinkHorizontally
 import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -85,6 +93,7 @@ import mint.app.core.model.MediaFormat
 import mint.app.core.model.MediaItem
 import mint.app.service.DownloadService
 import mint.app.resolution.ResolverRegistry
+import mint.app.ui.components.IndeterminateProgressBar
 import mint.app.ui.components.StreamInfoCard
 import mint.app.ui.components.formatBytes
 import mint.app.ui.theme.RobotoMonoMedium
@@ -149,6 +158,126 @@ fun HomePage(modifier: Modifier = Modifier) {
         }
     }
 
+    AnimatedVisibility(
+        visibleState = visibleState,
+        enter = fadeIn(animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing)),
+        modifier = modifier,
+    ) {
+        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+            val isLandscape = maxWidth > maxHeight
+            val hasContent = HomeSession.state != ResolveState.Idle
+
+            if (isLandscape) {
+                val split by animateFloatAsState(
+                    targetValue = if (hasContent) 1f else 0.001f,
+                    animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
+                    label = "landscapeSplit",
+                )
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(horizontal = 40.dp),
+                ) {
+                    Box(modifier = Modifier.weight(split)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(
+                                    rememberScrollState(),
+                                    overscrollEffect = null,
+                                )
+                                .padding(end = 20.dp),
+                            verticalArrangement = Arrangement.Center,
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                        ) {
+                            ResolveResult(
+                                startDownload = startDownload,
+                                compact = true,
+                            )
+                        }
+                    }
+                    AnimatedVisibility(
+                        visible = hasContent,
+                        enter = expandHorizontally(
+                            animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
+                        ) + fadeIn(animationSpec = tween(durationMillis = 350)),
+                        exit = shrinkHorizontally(
+                            animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
+                        ) + fadeOut(animationSpec = tween(durationMillis = 350)),
+                    ) {
+                        Column(
+                            modifier = Modifier.fillMaxHeight(),
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .width(1.dp)
+                                    .height(160.dp)
+                                    .background(MaterialTheme.colorScheme.outlineVariant),
+                            )
+                        }
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .verticalScroll(
+                                    rememberScrollState(),
+                                    overscrollEffect = null,
+                                )
+                                .padding(start = 20.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally,
+                            verticalArrangement = Arrangement.Center,
+                        ) {
+                            HomeHero()
+                        }
+                    }
+                }
+            } else {
+                val density = LocalDensity.current
+                var heroHeightPx by remember { mutableStateOf(0f) }
+                val heroHeight = with(density) { heroHeightPx.toDp() }
+
+                val bottomReserve = 140.dp
+                val centeredTop = ((maxHeight - bottomReserve - heroHeight) / 2).coerceAtLeast(24.dp)
+
+                val heroTopPadding by animateDpAsState(
+                    targetValue = if (hasContent) 56.dp else centeredTop,
+                    animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
+                    label = "heroTopPadding",
+                )
+
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .verticalScroll(
+                            rememberScrollState(),
+                            overscrollEffect = null,
+                        )
+                        .padding(horizontal = 24.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.Top,
+                ) {
+                    Spacer(modifier = Modifier.height(heroTopPadding))
+                    Column(
+                        modifier = Modifier.onSizeChanged { heroHeightPx = it.height.toFloat() },
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        HomeHero()
+                    }
+                    Spacer(modifier = Modifier.height(20.dp))
+                    ResolveResult(startDownload = startDownload)
+                    Spacer(modifier = Modifier.height(120.dp))
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun HomeHero() {
+    val context = LocalContext.current
+
     val resolve: (String) -> Unit = { url ->
         val trimmed = url.trim()
         if (trimmed.isNotEmpty()) {
@@ -156,174 +285,140 @@ fun HomePage(modifier: Modifier = Modifier) {
         }
     }
 
-    AnimatedVisibility(
-        visibleState = visibleState,
-        enter = fadeIn(animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing)),
-        modifier = modifier,
-    ) {
-        BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val density = LocalDensity.current
-            val hasContent = HomeSession.state != ResolveState.Idle
-            var heroHeightPx by remember { mutableStateOf(0f) }
-            val heroHeight = with(density) { heroHeightPx.toDp() }
-
-            val bottomReserve = 140.dp
-            val centeredTop = ((maxHeight - bottomReserve - heroHeight) / 2).coerceAtLeast(24.dp)
-
-            val heroTopPadding by animateDpAsState(
-                targetValue = if (hasContent) 56.dp else centeredTop,
-                animationSpec = tween(durationMillis = 350, easing = FastOutSlowInEasing),
-                label = "heroTopPadding",
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        ShimmerTitle()
+        Spacer(modifier = Modifier.height(40.dp))
+        OutlinedTextField(
+            value = HomeSession.link,
+            onValueChange = { HomeSession.link = it },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = {
+                Text(
+                    text = "Paste link here...",
+                    style = MaterialTheme.typography.bodyMedium,
+                )
+            },
+            singleLine = true,
+            shape = RoundedCornerShape(16.dp),
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { resolve(HomeSession.link) }),
+            trailingIcon = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    AnimatedVisibility(
+                        visible = HomeSession.link.isNotBlank(),
+                        enter = fadeIn(animationSpec = tween(180)) + scaleIn(
+                            initialScale = 0.6f,
+                            animationSpec = tween(180, easing = FastOutSlowInEasing),
+                        ),
+                        exit = fadeOut(animationSpec = tween(140)) + scaleOut(
+                            targetScale = 0.6f,
+                            animationSpec = tween(140),
+                        ),
+                    ) {
+                        IconButton(onClick = {
+                            HomeSession.link = ""
+                            HomeSession.reset()
+                        }) {
+                            Icon(
+                                imageVector = TablerIcons.Outline.X,
+                                contentDescription = "Clear link",
+                                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.size(20.dp),
+                            )
+                        }
+                    }
+                    IconButton(onClick = {
+                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+                        val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
+                        if (!text.isNullOrBlank()) {
+                            HomeSession.link = text
+                            resolve(text)
+                        }
+                    }) {
+                        Icon(
+                            imageVector = TablerIcons.Outline.Clipboard,
+                            contentDescription = "Paste from clipboard",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(20.dp),
+                        )
+                    }
+                }
+            },
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        val subtleColor = lerp(
+            start = MaterialTheme.colorScheme.onBackground,
+            stop = MaterialTheme.colorScheme.background,
+            fraction = 0.55f,
+        )
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(
+                text = "We support YouTube, Instagram, TikTok, X & Pinterest.",
+                style = MaterialTheme.typography.labelMedium,
+                color = subtleColor,
+                textAlign = TextAlign.Center,
             )
+            Text(
+                text = "More soon!",
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = subtleColor,
+                textAlign = TextAlign.Center,
+            )
+        }
+    }
+}
 
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .verticalScroll(
-                        rememberScrollState(),
-                        overscrollEffect = null,
-                    )
-                    .padding(horizontal = 24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-                verticalArrangement = Arrangement.Top,
-            ) {
-                Spacer(modifier = Modifier.height(heroTopPadding))
-                Column(
-                    modifier = Modifier.onSizeChanged { heroHeightPx = it.height.toFloat() },
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                ) {
-                    ShimmerTitle()
-                    Spacer(modifier = Modifier.height(40.dp))
-                    OutlinedTextField(
-                        value = HomeSession.link,
-                        onValueChange = { HomeSession.link = it },
-                        modifier = Modifier.fillMaxWidth(),
-                        placeholder = {
-                            Text(
-                                text = "Paste link here...",
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(16.dp),
-                        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                        keyboardActions = KeyboardActions(onSearch = { resolve(HomeSession.link) }),
-                        trailingIcon = {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                AnimatedVisibility(
-                                    visible = HomeSession.link.isNotBlank(),
-                                    enter = fadeIn(animationSpec = tween(180)) + scaleIn(
-                                        initialScale = 0.6f,
-                                        animationSpec = tween(180, easing = FastOutSlowInEasing),
-                                    ),
-                                    exit = fadeOut(animationSpec = tween(140)) + scaleOut(
-                                        targetScale = 0.6f,
-                                        animationSpec = tween(140),
-                                    ),
-                                ) {
-                                    IconButton(onClick = {
-                                        HomeSession.link = ""
-                                        HomeSession.reset()
-                                    }) {
-                                        Icon(
-                                            imageVector = TablerIcons.Outline.X,
-                                            contentDescription = "Clear link",
-                                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            modifier = Modifier.size(20.dp),
-                                        )
-                                    }
-                                }
-                                IconButton(onClick = {
-                                    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-                                    val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
-                                    if (!text.isNullOrBlank()) {
-                                        HomeSession.link = text
-                                        resolve(text)
-                                    }
-                                }) {
-                                    Icon(
-                                        imageVector = TablerIcons.Outline.Clipboard,
-                                        contentDescription = "Paste from clipboard",
-                                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
-                                        modifier = Modifier.size(20.dp),
-                                    )
-                                }
+@Composable
+private fun ResolveResult(
+    startDownload: (MediaFormat, Int?) -> Unit,
+    compact: Boolean = false,
+) {
+    AnimatedContent(
+        targetState = HomeSession.state,
+        transitionSpec = {
+            (fadeIn(animationSpec = tween(250, easing = FastOutSlowInEasing)) +
+                slideInVertically(animationSpec = tween(250, easing = FastOutSlowInEasing)) { it / 20 }) togetherWith
+                (fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)) +
+                    slideOutVertically(animationSpec = tween(200, easing = FastOutSlowInEasing)) { it / 20 })
+        },
+        label = "resolveState",
+    ) { state ->
+        when (state) {
+            ResolveState.Idle -> Unit
+            ResolveState.Loading -> {
+                IndeterminateProgressBar(
+                    modifier = Modifier.fillMaxWidth(0.5f),
+                )
+            }
+            is ResolveState.Error -> {
+                Text(
+                    text = state.message,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.error,
+                )
+            }
+            is ResolveState.Success -> {
+                val info = state.info
+                val allItems = info.imageOptions + info.gifOptions + info.videoOptions
+                when {
+                    info.platform != "youtube" && (info.imageOptions.isNotEmpty() || info.gifOptions.isNotEmpty() || allItems.size > 1) -> MediaOptionsSection(
+                        info = info,
+                        onDownloadItem = { option -> startDownload(option, null) },
+                        onDownloadAll = {
+                            allItems.forEachIndexed { index, option ->
+                                startDownload(option, index)
                             }
                         },
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    val subtleColor = lerp(
-                        start = MaterialTheme.colorScheme.onBackground,
-                        stop = MaterialTheme.colorScheme.background,
-                        fraction = 0.55f,
+                    info.platform == "youtube" -> StreamInfoCard(
+                        info = info,
+                        downloading = false,
+                        onOptionClick = { option -> startDownload(option, null) },
+                        compact = compact,
                     )
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = "We support YouTube, Instagram, TikTok, X & Pinterest.",
-                            style = MaterialTheme.typography.labelMedium,
-                            color = subtleColor,
-                            textAlign = TextAlign.Center,
-                        )
-                        Text(
-                            text = "More soon!",
-                            style = MaterialTheme.typography.labelMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = subtleColor,
-                            textAlign = TextAlign.Center,
-                        )
-                    }
+                    else -> AutoDownloadFlow(info = info)
                 }
-                Spacer(modifier = Modifier.height(20.dp))
-                AnimatedContent(
-                    targetState = HomeSession.state,
-                    transitionSpec = {
-                        (fadeIn(animationSpec = tween(250, easing = FastOutSlowInEasing)) +
-                            slideInVertically(animationSpec = tween(250, easing = FastOutSlowInEasing)) { it / 20 }) togetherWith
-                            (fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)) +
-                                slideOutVertically(animationSpec = tween(200, easing = FastOutSlowInEasing)) { it / 20 })
-                    },
-                    label = "resolveState",
-                ) { state ->
-                    when (state) {
-                        ResolveState.Idle -> Unit
-                        ResolveState.Loading -> {
-                            CircularProgressIndicator(
-                                modifier = Modifier.size(32.dp),
-                                strokeWidth = 3.dp,
-                                color = MaterialTheme.colorScheme.primary,
-                            )
-                        }
-                        is ResolveState.Error -> {
-                            Text(
-                                text = state.message,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.error,
-                            )
-                        }
-                        is ResolveState.Success -> {
-                            val info = state.info
-                            val allItems = info.imageOptions + info.gifOptions + info.videoOptions
-                            when {
-                                info.platform != "youtube" && (info.imageOptions.isNotEmpty() || info.gifOptions.isNotEmpty() || allItems.size > 1) -> MediaOptionsSection(
-                                    info = info,
-                                    onDownloadItem = { option -> startDownload(option, null) },
-                                    onDownloadAll = {
-                                        allItems.forEachIndexed { index, option ->
-                                            startDownload(option, index)
-                                        }
-                                    },
-                                )
-                                info.platform == "youtube" -> StreamInfoCard(
-                                    info = info,
-                                    downloading = false,
-                                    onOptionClick = { option -> startDownload(option, null) },
-                                )
-                                else -> AutoDownloadFlow(info = info)
-                            }
-                        }
-                    }
-                }
-                Spacer(modifier = Modifier.height(120.dp))
             }
         }
     }

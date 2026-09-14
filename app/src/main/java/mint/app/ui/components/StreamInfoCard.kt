@@ -29,6 +29,7 @@ fun StreamInfoCard(
     downloading: Boolean,
     onOptionClick: (MediaFormat) -> Unit,
     modifier: Modifier = Modifier,
+    compact: Boolean = false,
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -36,8 +37,8 @@ fun StreamInfoCard(
         color = MaterialTheme.colorScheme.surfaceContainer,
     ) {
         Column(
-            modifier = Modifier.padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.padding(if (compact) 12.dp else 16.dp),
+            verticalArrangement = Arrangement.spacedBy(if (compact) 8.dp else 12.dp),
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -49,7 +50,10 @@ fun StreamInfoCard(
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     modifier = Modifier
-                        .size(width = 112.dp, height = 64.dp)
+                        .size(
+                            width = if (compact) 90.dp else 112.dp,
+                            height = if (compact) 51.dp else 64.dp,
+                        )
                         .clip(RoundedCornerShape(12.dp)),
                 )
                 Column(
@@ -58,7 +62,11 @@ fun StreamInfoCard(
                 ) {
                     Text(
                         text = info.title,
-                        style = MaterialTheme.typography.titleMedium,
+                        style = if (compact) {
+                            MaterialTheme.typography.titleSmall
+                        } else {
+                            MaterialTheme.typography.titleMedium
+                        },
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
