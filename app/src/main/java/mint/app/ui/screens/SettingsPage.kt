@@ -650,6 +650,7 @@ private fun DownloadsSection() {
     var subfolder by remember { mutableStateOf(DownloadPreferences.subfolder(context)) }
     var videoDir by remember { mutableStateOf(DownloadPreferences.videoDir(context)) }
     var audioDir by remember { mutableStateOf(DownloadPreferences.audioDir(context)) }
+    var imageDir by remember { mutableStateOf(DownloadPreferences.imageDir(context)) }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
@@ -734,16 +735,35 @@ private fun DownloadsSection() {
                     shape = RoundedCornerShape(16.dp),
                 )
                 Text(
+                    text = "Images folder",
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                OutlinedTextField(
+                    value = imageDir,
+                    onValueChange = { new ->
+                        imageDir = new
+                        DownloadPreferences.setImageDir(context, new)
+                    },
+                    modifier = Modifier.fillMaxWidth(),
+                    placeholder = { Text(text = "images") },
+                    singleLine = true,
+                    shape = RoundedCornerShape(16.dp),
+                )
+                Text(
                     text = buildString {
                         val base = subfolder.trim('/')
                         val vid = videoDir.trim('/')
                         val aud = audioDir.trim('/')
+                        val img = imageDir.trim('/')
                         append("/sdcard/Download/")
                         append(if (base.isBlank()) "MintApp" else base)
                         append('/')
                         append(if (vid.isBlank()) "videos" else vid)
                         append(" · ")
                         append(if (aud.isBlank()) "audios" else aud)
+                        append(" · ")
+                        append(if (img.isBlank()) "images" else img)
                         append("/")
                     },
                     style = MaterialTheme.typography.bodySmall,
