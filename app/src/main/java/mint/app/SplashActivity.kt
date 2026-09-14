@@ -59,11 +59,13 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import mint.app.R
 import mint.app.core.prefs.DownloadPreferences
 import mint.app.core.util.Logger
 import mint.app.ui.theme.RobotoMonoMedium
@@ -83,6 +85,10 @@ private const val WORD_FONT_SIZE_SP = 90
 private const val WORD_BASELINE_OFFSET_DP = 25
 
 class SplashActivity : ComponentActivity() {
+
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(mint.app.core.prefs.AppLocale.apply(newBase))
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -180,20 +186,20 @@ private fun PermissionGate(onGranted: () -> Unit) {
     ) {
         Image(
             painter = painterResource(R.drawable.logo_m),
-            contentDescription = "Mint logo",
+            contentDescription = stringResource(R.string.cd_logo),
             modifier = Modifier
                 .size(96.dp)
                 .clip(CircleShape),
         )
         Spacer(modifier = Modifier.height(24.dp))
         Text(
-            text = "Permissions needed",
+            text = stringResource(R.string.splash_permissions_title),
             style = MaterialTheme.typography.headlineSmall,
             color = MaterialTheme.colorScheme.onBackground,
         )
         Spacer(modifier = Modifier.height(8.dp))
         Text(
-            text = "Mint needs storage and notification permissions to download files.",
+            text = stringResource(R.string.splash_permissions_message),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 32.dp),
@@ -206,11 +212,11 @@ private fun PermissionGate(onGranted: () -> Unit) {
                 }
                 context.startActivity(intent)
             }) {
-                Text("Open Settings")
+                Text(stringResource(R.string.splash_open_app_settings))
             }
         } else {
             Button(onClick = { launcher.launch(perms.toTypedArray()) }) {
-                Text("Continue")
+                Text(stringResource(R.string.action_continue))
             }
         }
     }
@@ -271,7 +277,7 @@ private fun SplashScreen(onFinished: () -> Unit) {
             ) {
                 Image(
                     painter = painterResource(R.drawable.logo_m),
-                    contentDescription = "Mint logo",
+                    contentDescription = stringResource(R.string.cd_logo),
                     modifier = Modifier
                         .height(LOGO_HEIGHT_DP.dp)
                         .aspectRatio(LOGO_ASPECT_RATIO),
@@ -305,7 +311,7 @@ private fun SplashScreen(onFinished: () -> Unit) {
             }
 
             Text(
-                text = "v${BuildConfig.VERSION_NAME}",
+                text = stringResource(R.string.settings_app_version_short, BuildConfig.VERSION_NAME),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier
