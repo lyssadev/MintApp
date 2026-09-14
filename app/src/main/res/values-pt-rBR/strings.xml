@@ -151,4 +151,5 @@
     <string name="notif_downloads_complete_count">%1$d arquivo(s) baixado(s)</string>
     <string name="notif_more">+%1$d mais</string>
     <string name="notif_download_failed">Falha no download — %1$s</string>
+    <string name="home_engines_setting_up">Preparando os motores...</string>
 </resources>
