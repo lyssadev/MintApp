@@ -131,7 +131,10 @@ object HomeSession {
 }
 
 @Composable
-fun HomePage(modifier: Modifier = Modifier) {
+fun HomePage(
+    modifier: Modifier = Modifier,
+    compact: Boolean = false,
+) {
     val visibleState = remember {
         MutableTransitionState(false).apply { targetState = true }
     }
@@ -164,7 +167,7 @@ fun HomePage(modifier: Modifier = Modifier) {
         modifier = modifier,
     ) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
-            val isLandscape = maxWidth > maxHeight
+            val isLandscape = maxWidth > maxHeight && !compact
             val hasContent = HomeSession.state != ResolveState.Idle
 
             if (isLandscape) {
@@ -176,7 +179,7 @@ fun HomePage(modifier: Modifier = Modifier) {
                 Row(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(horizontal = 40.dp),
+                        .padding(horizontal = if (compact) 24.dp else 40.dp),
                 ) {
                     Box(modifier = Modifier.weight(split)) {
                         Column(
