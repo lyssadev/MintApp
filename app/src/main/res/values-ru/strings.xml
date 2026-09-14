@@ -1,0 +1,154 @@
+<resources>
+    <string name="app_name">Mint</string>
+
+    <!-- Generic actions -->
+    <string name="action_cancel">Отмена</string>
+    <string name="action_delete">Удалить</string>
+    <string name="action_close">Закрыть</string>
+    <string name="action_ok">ОК</string>
+    <string name="action_update">Обновить</string>
+    <string name="action_link">Подключить</string>
+    <string name="action_unlink">Отключить</string>
+    <string name="action_open_settings">Открыть настройки</string>
+    <string name="action_download">Скачать</string>
+    <string name="action_download_all">Скачать всё (%1$d)</string>
+    <string name="action_remind_later">Напомнить позже</string>
+    <string name="action_continue">Продолжить</string>
+
+    <!-- Accessibility descriptions -->
+    <string name="cd_logo">Логотип Mint</string>
+    <string name="cd_close">Закрыть</string>
+    <string name="cd_clear_link">Очистить ссылку</string>
+    <string name="cd_paste_clipboard">Вставить из буфера обмена</string>
+    <string name="cd_cancel_download">Отменить загрузку</string>
+    <string name="cd_delete_all">Удалить все</string>
+    <string name="cd_delete_download">Удалить загрузку</string>
+    <string name="cd_locate_download">Открыть расположение файла</string>
+    <string name="cd_selected">Выбрано</string>
+
+    <!-- Home -->
+    <string name="home_title">Mint</string>
+    <string name="home_link_placeholder">Вставьте ссылку сюда...</string>
+    <string name="home_supported_platforms">Поддерживаются YouTube, Instagram, TikTok, X и Pinterest.</string>
+    <string name="home_more_soon">Скоро будет больше!</string>
+    <string name="home_error_resolve">Не удалось обработать ссылку</string>
+
+    <string name="downloads_status_downloading">Загрузка %1$d%%</string>
+    <string name="downloads_status_complete">Загрузка завершена</string>
+
+    <!-- Stream info card -->
+    <string name="stream_badge_video">Видео</string>
+    <string name="stream_badge_audio">Аудио</string>
+    <string name="stream_no_streams">Нет доступных для загрузки потоков</string>
+
+    <!-- Downloads -->
+    <string name="downloads_title">Загрузки</string>
+    <string name="downloads_section_in_progress">Выполняется</string>
+    <string name="downloads_section_failed">С ошибками</string>
+    <string name="downloads_section_completed">Завершённые</string>
+    <string name="downloads_empty">Пока нет загрузок</string>
+    <string name="downloads_status_preparing">Подготовка...</string>
+    <string name="downloads_status_processing">Обработка...</string>
+    <string name="downloads_file_deleted">Файл удалён</string>
+    <string name="downloads_delete_single_title">Удалить загрузку?</string>
+    <string name="downloads_delete_single_message">\"%1$s\" будет безвозвратно удалён с устройства.</string>
+    <string name="downloads_delete_all_title">Удалить все?</string>
+    <string name="downloads_delete_all_message">Все %1$d завершённых и неудачных загрузок, включая их файлы, будут безвозвратно удалены с устройства.</string>
+
+    <!-- Settings: appearance -->
+    <string name="settings_title">Настройки</string>
+    <string name="settings_subtitle">Настройте приложение</string>
+    <string name="settings_appearance">Внешний вид</string>
+    <string name="settings_theme">Тема</string>
+    <string name="settings_theme_managed_material_you">Управляется Material You</string>
+    <string name="settings_theme_disable_amoled_first">Отключите AMOLED, чтобы сменить тему</string>
+    <string name="settings_presets_available">Доступно тем: %1$d</string>
+    <string name="settings_mode">Режим</string>
+    <string name="settings_mode_fixed">Режим (фиксирован для этой темы)</string>
+    <string name="settings_mode_light">Светлая</string>
+    <string name="settings_mode_dark">Тёмная</string>
+    <string name="settings_mode_system">Системная</string>
+    <string name="settings_material_you">Material You</string>
+    <string name="settings_material_you_disable_amoled">Отключите AMOLED, чтобы использовать Material You</string>
+    <string name="settings_material_you_wallpaper">Цвета из ваших обоев</string>
+    <string name="settings_material_you_requires">Требуется Android 12 или новее</string>
+    <string name="settings_amoled">AMOLED</string>
+    <string name="settings_amoled_description">Чисто чёрный фон в тёмном режиме</string>
+
+    <!-- Settings: connections -->
+    <string name="platform_instagram">Instagram</string>
+    <string name="platform_tiktok">TikTok</string>
+    <string name="platform_pinterest">Pinterest</string>
+    <string name="settings_connections">Аккаунты</string>
+    <string name="settings_connection_linked">Подключено · для загрузок из %1$s</string>
+    <string name="settings_connection_login_hint">Войдите, чтобы открыть полный доступ</string>
+    <string name="settings_connection_unlinked_toast">%1$s отключён</string>
+
+    <!-- Settings: downloads -->
+    <string name="settings_downloads_section">Загрузки</string>
+    <string name="settings_download_folder">Папка загрузок</string>
+    <string name="settings_download_folder_hint">Базовая папка внутри /sdcard/Download/</string>
+    <string name="settings_videos_folder">Папка видео</string>
+    <string name="settings_audios_folder">Папка аудио</string>
+    <string name="settings_images_folder">Папка изображений</string>
+    <string name="settings_subfolder_placeholder">MintApp</string>
+    <string name="settings_videos_placeholder">videos</string>
+    <string name="settings_audios_placeholder">audios</string>
+    <string name="settings_images_placeholder">images</string>
+
+    <!-- Settings: language -->
+    <string name="settings_language">Язык</string>
+    <string name="settings_language_subtitle">Язык приложения</string>
+    <string name="language_system">Как в системе</string>
+    <string name="language_en">English</string>
+    <string name="language_es">Español</string>
+    <string name="language_pt_br">Português (Brasil)</string>
+    <string name="language_fr">Français</string>
+    <string name="language_de">Deutsch</string>
+    <string name="language_ru">Русский</string>
+    <string name="language_in">Bahasa Indonesia</string>
+    <string name="language_ja">日本語</string>
+
+    <!-- Settings: about -->
+    <string name="settings_about">О приложении</string>
+    <string name="settings_app_version">v%1$s · от lyssadev</string>
+    <string name="settings_app_version_short">v%1$s</string>
+    <string name="settings_repository">Репозиторий</string>
+    <string name="settings_check_updates">Проверить обновления</string>
+    <string name="settings_check_updates_subtitle">У вас v%1$s</string>
+
+    <!-- Update dialog -->
+    <string name="update_checking">Проверка обновлений</string>
+    <string name="update_checking_detail">Поиск версии новее v%1$s</string>
+    <string name="update_up_to_date">У вас последняя версия</string>
+    <string name="update_up_to_date_detail">v%1$s — новейшая версия</string>
+    <string name="update_available">Доступно обновление</string>
+    <string name="update_available_detail">Доступно %1$s (%2$s). У вас v%3$s.</string>
+    <string name="update_size">Размер: %1$s</string>
+    <string name="update_downloading">Загрузка обновления</string>
+    <string name="update_preparing">Подготовка загрузки...</string>
+    <string name="update_install_permission_title">Требуется разрешение на установку</string>
+    <string name="update_install_permission_message">Mint требуется разрешение на установку приложений из этого источника для обновления до %1$s. Нажмите кнопку ниже и разрешите установку — обновление продолжится автоматически.</string>
+    <string name="update_failed">Ошибка обновления</string>
+
+    <!-- Splash / permissions -->
+    <string name="splash_permissions_title">Требуются разрешения</string>
+    <string name="splash_permissions_message">Mint требуются разрешения на хранение и уведомления для загрузки файлов.</string>
+    <string name="splash_open_app_settings">Открыть настройки</string>
+
+    <!-- Login screens -->
+    <string name="login_instagram_title">Вход в Instagram</string>
+    <string name="login_tiktok_title">Вход в TikTok</string>
+    <string name="login_pinterest_title">Вход в Pinterest</string>
+
+    <!-- Notifications -->
+    <string name="notif_channel_name">Загрузки</string>
+    <string name="notif_channel_description">Прогресс и завершение загрузок</string>
+    <string name="notif_downloading">Загрузка...</string>
+    <string name="notif_processing">Обработка...</string>
+    <string name="notif_action_cancel">Отмена</string>
+    <string name="notif_downloads_complete">Загрузки завершены</string>
+    <string name="notif_downloads_complete_count">Загружено файлов: %1$d</string>
+    <string name="notif_more">ещё +%1$d</string>
+    <string name="notif_download_failed">Ошибка загрузки — %1$s</string>
+</resources>
