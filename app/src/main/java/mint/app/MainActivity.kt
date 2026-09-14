@@ -9,7 +9,7 @@ import androidx.compose.runtime.LaunchedEffect
 import mint.app.core.prefs.AppLocale
 import mint.app.core.update.AppUpdater
 import mint.app.core.update.UpdateUiState
-import mint.app.resolution.ResolverRegistry
+import mint.app.resolution.EngineSetup
 import mint.app.ui.MintApp
 import mint.app.ui.screens.HomeSession
 import mint.app.ui.theme.MintTheme
@@ -25,7 +25,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         AppUpdater.cleanup(this)
         ThemeController.init(this)
-        ResolverRegistry.init(this)
+        EngineSetup.start(this)
         applyThemeAwareEdgeToEdge()
         setContent {
             LaunchedEffect(
