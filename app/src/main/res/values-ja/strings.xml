@@ -1,0 +1,154 @@
+<resources>
+    <string name="app_name">Mint</string>
+
+    <!-- Generic actions -->
+    <string name="action_cancel">キャンセル</string>
+    <string name="action_delete">削除</string>
+    <string name="action_close">閉じる</string>
+    <string name="action_ok">OK</string>
+    <string name="action_update">更新</string>
+    <string name="action_link">連携</string>
+    <string name="action_unlink">連携解除</string>
+    <string name="action_open_settings">設定を開く</string>
+    <string name="action_download">ダウンロード</string>
+    <string name="action_download_all">すべてダウンロード (%1$d)</string>
+    <string name="action_remind_later">後で通知</string>
+    <string name="action_continue">続行</string>
+
+    <!-- Accessibility descriptions -->
+    <string name="cd_logo">Mint ロゴ</string>
+    <string name="cd_close">閉じる</string>
+    <string name="cd_clear_link">リンクをクリア</string>
+    <string name="cd_paste_clipboard">クリップボードから貼り付け</string>
+    <string name="cd_cancel_download">ダウンロードをキャンセル</string>
+    <string name="cd_delete_all">すべて削除</string>
+    <string name="cd_delete_download">ダウンロードを削除</string>
+    <string name="cd_locate_download">ダウンロード場所を開く</string>
+    <string name="cd_selected">選択済み</string>
+
+    <!-- Home -->
+    <string name="home_title">Mint</string>
+    <string name="home_link_placeholder">ここにリンクを貼り付け...</string>
+    <string name="home_supported_platforms">YouTube、Instagram、TikTok、X、Pinterest に対応。</string>
+    <string name="home_more_soon">近日対応予定！</string>
+    <string name="home_error_resolve">リンクを処理できませんでした</string>
+
+    <string name="downloads_status_downloading">ダウンロード中 %1$d%%</string>
+    <string name="downloads_status_complete">ダウンロード完了</string>
+
+    <!-- Stream info card -->
+    <string name="stream_badge_video">動画</string>
+    <string name="stream_badge_audio">音声</string>
+    <string name="stream_no_streams">ダウンロード可能なストリームがありません</string>
+
+    <!-- Downloads -->
+    <string name="downloads_title">ダウンロード</string>
+    <string name="downloads_section_in_progress">進行中</string>
+    <string name="downloads_section_failed">失敗</string>
+    <string name="downloads_section_completed">完了</string>
+    <string name="downloads_empty">ダウンロードはまだありません</string>
+    <string name="downloads_status_preparing">準備中...</string>
+    <string name="downloads_status_processing">処理中...</string>
+    <string name="downloads_file_deleted">ファイルは削除済み</string>
+    <string name="downloads_delete_single_title">ダウンロードを削除しますか？</string>
+    <string name="downloads_delete_single_message">「%1$s」はデバイスから完全に削除されます。</string>
+    <string name="downloads_delete_all_title">すべて削除しますか？</string>
+    <string name="downloads_delete_all_message">完了・失敗した %1$d 件のダウンロードとそのファイルがデバイスから完全に削除されます。</string>
+
+    <!-- Settings: appearance -->
+    <string name="settings_title">設定</string>
+    <string name="settings_subtitle">アプリをカスタマイズ</string>
+    <string name="settings_appearance">外観</string>
+    <string name="settings_theme">テーマ</string>
+    <string name="settings_theme_managed_material_you">Material You が管理しています</string>
+    <string name="settings_theme_disable_amoled_first">テーマを変更するには AMOLED をオフにしてください</string>
+    <string name="settings_presets_available">%1$d 個のテーマを利用可能</string>
+    <string name="settings_mode">モード</string>
+    <string name="settings_mode_fixed">モード（このテーマでは固定）</string>
+    <string name="settings_mode_light">ライト</string>
+    <string name="settings_mode_dark">ダーク</string>
+    <string name="settings_mode_system">システム</string>
+    <string name="settings_material_you">Material You</string>
+    <string name="settings_material_you_disable_amoled">Material You を使うには AMOLED をオフにしてください</string>
+    <string name="settings_material_you_wallpaper">壁紙から色を取得</string>
+    <string name="settings_material_you_requires">Android 12 以降が必要です</string>
+    <string name="settings_amoled">AMOLED</string>
+    <string name="settings_amoled_description">ダークモードで純黒の背景を使用</string>
+
+    <!-- Settings: connections -->
+    <string name="platform_instagram">Instagram</string>
+    <string name="platform_tiktok">TikTok</string>
+    <string name="platform_pinterest">Pinterest</string>
+    <string name="settings_connections">アカウント</string>
+    <string name="settings_connection_linked">連携済み · %1$s のダウンロード用</string>
+    <string name="settings_connection_login_hint">ログインしてすべての機能を利用</string>
+    <string name="settings_connection_unlinked_toast">%1$s の連携を解除しました</string>
+
+    <!-- Settings: downloads -->
+    <string name="settings_downloads_section">ダウンロード</string>
+    <string name="settings_download_folder">ダウンロードフォルダー</string>
+    <string name="settings_download_folder_hint">/sdcard/Download/ 内の基本フォルダー</string>
+    <string name="settings_videos_folder">動画フォルダー</string>
+    <string name="settings_audios_folder">音声フォルダー</string>
+    <string name="settings_images_folder">画像フォルダー</string>
+    <string name="settings_subfolder_placeholder">MintApp</string>
+    <string name="settings_videos_placeholder">videos</string>
+    <string name="settings_audios_placeholder">audios</string>
+    <string name="settings_images_placeholder">images</string>
+
+    <!-- Settings: language -->
+    <string name="settings_language">言語</string>
+    <string name="settings_language_subtitle">アプリの表示言語</string>
+    <string name="language_system">システムに従う</string>
+    <string name="language_en">English</string>
+    <string name="language_es">Español</string>
+    <string name="language_pt_br">Português (Brasil)</string>
+    <string name="language_fr">Français</string>
+    <string name="language_de">Deutsch</string>
+    <string name="language_ru">Русский</string>
+    <string name="language_in">Bahasa Indonesia</string>
+    <string name="language_ja">日本語</string>
+
+    <!-- Settings: about -->
+    <string name="settings_about">このアプリについて</string>
+    <string name="settings_app_version">v%1$s · by lyssadev</string>
+    <string name="settings_app_version_short">v%1$s</string>
+    <string name="settings_repository">リポジトリ</string>
+    <string name="settings_check_updates">アップデートを確認</string>
+    <string name="settings_check_updates_subtitle">現在 v%1$s</string>
+
+    <!-- Update dialog -->
+    <string name="update_checking">アップデートを確認中</string>
+    <string name="update_checking_detail">v%1$s より新しいバージョンを探しています</string>
+    <string name="update_up_to_date">最新です</string>
+    <string name="update_up_to_date_detail">v%1$s が最新バージョンです</string>
+    <string name="update_available">アップデートあり</string>
+    <string name="update_available_detail">%1$s（%2$s）が利用可能です。現在 v%3$s です。</string>
+    <string name="update_size">サイズ: %1$s</string>
+    <string name="update_downloading">アップデートをダウンロード中</string>
+    <string name="update_preparing">ダウンロードを準備中...</string>
+    <string name="update_install_permission_title">インストール権限が必要です</string>
+    <string name="update_install_permission_message">%1$s に更新するには、このソースからのアプリインストールを許可する必要があります。下のボタンをタップして許可すると、アップデートが自動的に続行されます。</string>
+    <string name="update_failed">アップデートに失敗しました</string>
+
+    <!-- Splash / permissions -->
+    <string name="splash_permissions_title">権限が必要です</string>
+    <string name="splash_permissions_message">ファイルをダウンロードするには、ストレージと通知の権限が必要です。</string>
+    <string name="splash_open_app_settings">設定を開く</string>
+
+    <!-- Login screens -->
+    <string name="login_instagram_title">Instagram にログイン</string>
+    <string name="login_tiktok_title">TikTok にログイン</string>
+    <string name="login_pinterest_title">Pinterest にログイン</string>
+
+    <!-- Notifications -->
+    <string name="notif_channel_name">ダウンロード</string>
+    <string name="notif_channel_description">ダウンロードの進行状況と完了</string>
+    <string name="notif_downloading">ダウンロード中...</string>
+    <string name="notif_processing">処理中...</string>
+    <string name="notif_action_cancel">キャンセル</string>
+    <string name="notif_downloads_complete">ダウンロード完了</string>
+    <string name="notif_downloads_complete_count">%1$d 件のファイルをダウンロードしました</string>
+    <string name="notif_more">他 %1$d 件</string>
+    <string name="notif_download_failed">ダウンロードに失敗しました — %1$s</string>
+</resources>
