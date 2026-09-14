@@ -31,6 +31,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -51,6 +52,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -61,6 +63,7 @@ import io.github.lyxnx.compose.ui.tablericons.outline.BrandPinterest
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandTiktok
 import io.github.lyxnx.compose.ui.tablericons.outline.Check
 import io.github.lyxnx.compose.ui.tablericons.outline.ChevronRight
+import io.github.lyxnx.compose.ui.tablericons.outline.Language
 import io.github.lyxnx.compose.ui.tablericons.outline.Folder
 import io.github.lyxnx.compose.ui.tablericons.outline.Link
 import io.github.lyxnx.compose.ui.tablericons.outline.Moon
@@ -74,8 +77,10 @@ import mint.app.R
 import mint.app.connection.InstagramLoginActivity
 import mint.app.connection.PinterestLoginActivity
 import mint.app.connection.TikTokLoginActivity
+import mint.app.core.prefs.AppLocale
 import mint.app.core.prefs.ConnectionPreferences
 import mint.app.core.prefs.DownloadPreferences
+import mint.app.core.prefs.LanguagePreferences
 import mint.app.core.update.UpdateUiState
 import mint.app.resolution.impl.InstagramResolver
 import mint.app.ui.theme.ThemeController
@@ -99,17 +104,18 @@ fun SettingsPage(modifier: Modifier = Modifier) {
         Spacer(modifier = Modifier.height(8.dp))
         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(
-                text = "Settings",
+                text = stringResource(R.string.settings_title),
                 style = MaterialTheme.typography.headlineMedium,
                 color = MaterialTheme.colorScheme.onBackground,
             )
             Text(
-                text = "Personalize your app",
+                text = stringResource(R.string.settings_subtitle),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
         AppearanceSection(onOpenThemePicker = { showThemePicker = true })
+        LanguageSection()
         ConnectionsSection()
         DownloadsSection()
         AboutSection()
@@ -127,9 +133,8 @@ private fun AppearanceSection(onOpenThemePicker: () -> Unit) {
     val currentPreset = ThemePresets.byId[ThemeController.presetId]
         ?: ThemePresets.byId.getValue(ThemePresets.DEFAULT_ID)
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = "Appearance",
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {            Text(
+                text = stringResource(R.string.settings_appearance),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
         )
@@ -173,14 +178,14 @@ private fun AppearanceSection(onOpenThemePicker: () -> Unit) {
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         Text(
-                            text = "Theme",
+                            text = stringResource(R.string.settings_theme),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
                             text = when {
-                                ThemeController.dynamicColor -> "Managed by Material You"
-                                ThemeController.amoled -> "Disable AMOLED to change theme"
+                                ThemeController.dynamicColor -> stringResource(R.string.settings_theme_managed_material_you)
+                                ThemeController.amoled -> stringResource(R.string.settings_theme_disable_amoled_first)
                                 else -> "${currentPreset.family} · ${currentPreset.name}"
                             },
                             style = MaterialTheme.typography.bodySmall,
@@ -197,7 +202,11 @@ private fun AppearanceSection(onOpenThemePicker: () -> Unit) {
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     Text(
-                        text = if (currentPreset.supportsBothModes) "Mode" else "Mode (fixed for this theme)",
+                        text = if (currentPreset.supportsBothModes) {
+                            stringResource(R.string.settings_mode)
+                        } else {
+                            stringResource(R.string.settings_mode_fixed)
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -222,17 +231,17 @@ private fun AppearanceSection(onOpenThemePicker: () -> Unit) {
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         Text(
-                            text = "Material You",
+                            text = stringResource(R.string.settings_material_you),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
                             text = if (ThemeController.amoled) {
-                                "Disable AMOLED to use Material You"
+                                stringResource(R.string.settings_material_you_disable_amoled)
                             } else if (dynamicSupported) {
-                                "Colors from your wallpaper"
+                                stringResource(R.string.settings_material_you_wallpaper)
                             } else {
-                                "Requires Android 12 or newer"
+                                stringResource(R.string.settings_material_you_requires)
                             },
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -261,12 +270,12 @@ private fun AppearanceSection(onOpenThemePicker: () -> Unit) {
                         verticalArrangement = Arrangement.spacedBy(2.dp),
                     ) {
                         Text(
-                            text = "AMOLED",
+                            text = stringResource(R.string.settings_amoled),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            text = "Pure black background in dark mode",
+                            text = stringResource(R.string.settings_amoled_description),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -284,9 +293,9 @@ private fun AppearanceSection(onOpenThemePicker: () -> Unit) {
 @Composable
 private fun ThemeModeSegmented(enabled: Boolean) {
     val options = listOf(
-        ThemeMode.LIGHT to "Light",
-        ThemeMode.DARK to "Dark",
-        ThemeMode.SYSTEM to "System",
+        ThemeMode.LIGHT to stringResource(R.string.settings_mode_light),
+        ThemeMode.DARK to stringResource(R.string.settings_mode_dark),
+        ThemeMode.SYSTEM to stringResource(R.string.settings_mode_system),
     )
     Row(
         modifier = Modifier
@@ -344,12 +353,12 @@ private fun ThemePickerDialog(onDismiss: () -> Unit) {
                 ) {
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Theme",
+                            text = stringResource(R.string.settings_theme),
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            text = "${ThemePresets.all.size} presets available",
+                            text = stringResource(R.string.settings_presets_available, ThemePresets.all.size),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -357,7 +366,7 @@ private fun ThemePickerDialog(onDismiss: () -> Unit) {
                     IconButton(onClick = onDismiss) {
                         Icon(
                             imageVector = TablerIcons.Outline.X,
-                            contentDescription = "Close",
+                            contentDescription = stringResource(R.string.cd_close),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -477,19 +486,141 @@ private fun ThemeSwatch(color: Color) {
 }
 
 @Composable
-private fun ConnectionsSection() {
+private fun LanguageSection() {
     val context = LocalContext.current
+    val activity = context as? Activity
+    var pickerOpen by remember { mutableStateOf(false) }
+    val current = LanguagePreferences.language(context)
+    val currentLabel = if (current == LanguagePreferences.SYSTEM) {
+        stringResource(R.string.language_system)
+    } else {
+        AppLocale.SUPPORTED.firstOrNull { it.first == current }?.second?.displayName ?: current
+    }
 
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(
-            text = "Connections",
+            text = stringResource(R.string.settings_language),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { pickerOpen = true }
+                    .padding(horizontal = 20.dp, vertical = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = TablerIcons.Outline.Language,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_language),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = currentLabel,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Icon(
+                    imageVector = TablerIcons.Outline.ChevronRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+    }
+
+    if (pickerOpen) {
+        AlertDialog(
+            onDismissRequest = { pickerOpen = false },
+            title = { Text(stringResource(R.string.settings_language)) },
+            text = {
+                Column {
+                    AppLocale.SUPPORTED.forEach { (tag, locale) ->
+                        val label = if (locale == null) {
+                            stringResource(R.string.language_system)
+                        } else {
+                            locale.displayName
+                        }
+                        val selected = tag == current
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(10.dp))
+                                .clickable {
+                                    pickerOpen = false
+                                    if (tag != current) {
+                                        LanguagePreferences.setLanguage(context, tag)
+                                        activity?.recreate()
+                                    }
+                                }
+                                .padding(horizontal = 8.dp, vertical = 12.dp),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            if (selected) {
+                                Icon(
+                                    imageVector = TablerIcons.Outline.Check,
+                                    contentDescription = stringResource(R.string.cd_selected),
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp),
+                                )
+                            } else {
+                                Spacer(modifier = Modifier.size(18.dp))
+                            }
+                            Text(
+                                text = label,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = if (selected) {
+                                    MaterialTheme.colorScheme.primary
+                                } else {
+                                    MaterialTheme.colorScheme.onSurface
+                                },
+                            )
+                        }
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {},
+        )
+    }
+}
+
+@Composable
+private fun ConnectionsSection() {
+    val context = LocalContext.current
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {            Text(
+                text = stringResource(R.string.settings_connections),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
         )
         ConnectionCard(
-            title = "Instagram",
+            title = stringResource(R.string.platform_instagram),
             subtitle = { linked ->
-                if (linked) "Linked · used for Instagram downloads" else "Login to unlock full access"
+                if (linked) {
+                    context.getString(R.string.settings_connection_linked, context.getString(R.string.platform_instagram))
+                } else {
+                    context.getString(R.string.settings_connection_login_hint)
+                }
             },
             icon = TablerIcons.Outline.BrandInstagram,
             isLinked = { ConnectionPreferences.isInstagramLinked(context) },
@@ -498,12 +629,16 @@ private fun ConnectionsSection() {
                 ConnectionPreferences.clearInstagram(context)
                 InstagramResolver.clearSession()
             },
-            unlinkMessage = "Instagram unlinked",
+            unlinkMessage = R.string.settings_connection_unlinked_toast to R.string.platform_instagram,
         )
         ConnectionCard(
-            title = "TikTok",
+            title = stringResource(R.string.platform_tiktok),
             subtitle = { linked ->
-                if (linked) "Linked · used for TikTok downloads" else "Login to unlock full access"
+                if (linked) {
+                    context.getString(R.string.settings_connection_linked, context.getString(R.string.platform_tiktok))
+                } else {
+                    context.getString(R.string.settings_connection_login_hint)
+                }
             },
             icon = TablerIcons.Outline.BrandTiktok,
             isLinked = { ConnectionPreferences.isTikTokLinked(context) },
@@ -511,12 +646,16 @@ private fun ConnectionsSection() {
             onClear = {
                 ConnectionPreferences.clearTikTok(context)
             },
-            unlinkMessage = "TikTok unlinked",
+            unlinkMessage = R.string.settings_connection_unlinked_toast to R.string.platform_tiktok,
         )
         ConnectionCard(
-            title = "Pinterest",
+            title = stringResource(R.string.platform_pinterest),
             subtitle = { linked ->
-                if (linked) "Linked · used for Pinterest downloads" else "Login to unlock full access"
+                if (linked) {
+                    context.getString(R.string.settings_connection_linked, context.getString(R.string.platform_pinterest))
+                } else {
+                    context.getString(R.string.settings_connection_login_hint)
+                }
             },
             icon = TablerIcons.Outline.BrandPinterest,
             isLinked = { ConnectionPreferences.isPinterestLinked(context) },
@@ -524,7 +663,7 @@ private fun ConnectionsSection() {
             onClear = {
                 ConnectionPreferences.clearPinterest(context)
             },
-            unlinkMessage = "Pinterest unlinked",
+            unlinkMessage = R.string.settings_connection_unlinked_toast to R.string.platform_pinterest,
         )
     }
 }
@@ -537,7 +676,7 @@ private fun ConnectionCard(
     isLinked: () -> Boolean,
     loginActivityClass: Class<*>,
     onClear: () -> Unit,
-    unlinkMessage: String,
+    unlinkMessage: Pair<Int, Int>,
 ) {
     val context = LocalContext.current
     var linked by remember { mutableStateOf(isLinked()) }
@@ -588,7 +727,7 @@ private fun ConnectionCard(
                         linked = false
                         Toast.makeText(
                             context,
-                            unlinkMessage,
+                            context.getString(unlinkMessage.first, context.getString(unlinkMessage.second)),
                             Toast.LENGTH_SHORT,
                         ).show()
                     },
@@ -607,7 +746,7 @@ private fun ConnectionCard(
                             modifier = Modifier.size(14.dp),
                         )
                         Text(
-                            text = "Unlink",
+                            text = stringResource(R.string.action_unlink),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onErrorContainer,
                         )
@@ -633,7 +772,7 @@ private fun ConnectionCard(
                             modifier = Modifier.size(14.dp),
                         )
                         Text(
-                            text = "Link",
+                            text = stringResource(R.string.action_link),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onPrimaryContainer,
                         )
@@ -652,10 +791,9 @@ private fun DownloadsSection() {
     var audioDir by remember { mutableStateOf(DownloadPreferences.audioDir(context)) }
     var imageDir by remember { mutableStateOf(DownloadPreferences.imageDir(context)) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = "Downloads",
-            style = MaterialTheme.typography.titleMedium,
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {            Text(
+                text = stringResource(R.string.settings_downloads_section),
+                style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
         )
         Surface(
@@ -679,12 +817,12 @@ private fun DownloadsSection() {
                     )
                     Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                         Text(
-                            text = "Download folder",
+                            text = stringResource(R.string.settings_download_folder),
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface,
                         )
                         Text(
-                            text = "Base folder inside /sdcard/Download/",
+                            text = stringResource(R.string.settings_download_folder_hint),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -697,13 +835,13 @@ private fun DownloadsSection() {
                         DownloadPreferences.setSubfolder(context, new)
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text(text = "MintApp") },
+                    placeholder = { Text(text = stringResource(R.string.settings_subfolder_placeholder)) },
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),
                 )
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 Text(
-                    text = "Videos folder",
+                    text = stringResource(R.string.settings_videos_folder),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -714,12 +852,12 @@ private fun DownloadsSection() {
                         DownloadPreferences.setVideoDir(context, new)
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text(text = "videos") },
+                    placeholder = { Text(text = stringResource(R.string.settings_videos_placeholder)) },
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),
                 )
                 Text(
-                    text = "Audios folder",
+                    text = stringResource(R.string.settings_audios_folder),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -730,12 +868,12 @@ private fun DownloadsSection() {
                         DownloadPreferences.setAudioDir(context, new)
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text(text = "audios") },
+                    placeholder = { Text(text = stringResource(R.string.settings_audios_placeholder)) },
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),
                 )
                 Text(
-                    text = "Images folder",
+                    text = stringResource(R.string.settings_images_folder),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -746,7 +884,7 @@ private fun DownloadsSection() {
                         DownloadPreferences.setImageDir(context, new)
                     },
                     modifier = Modifier.fillMaxWidth(),
-                    placeholder = { Text(text = "images") },
+                    placeholder = { Text(text = stringResource(R.string.settings_images_placeholder)) },
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),
                 )
@@ -778,9 +916,8 @@ private fun DownloadsSection() {
 private fun AboutSection() {
     val context = LocalContext.current
 
-    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-        Text(
-            text = "About",
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {            Text(
+                text = stringResource(R.string.settings_about),
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onBackground,
         )
@@ -796,19 +933,19 @@ private fun AboutSection() {
             ) {
                 Image(
                     painter = painterResource(R.drawable.logo_m),
-                    contentDescription = "Mint logo",
+                    contentDescription = stringResource(R.string.cd_logo),
                     modifier = Modifier
                         .size(44.dp)
                         .aspectRatio(385f / 311f),
                 )
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
-                        text = "Mint",
+                        text = stringResource(R.string.app_name),
                         style = MaterialTheme.typography.titleMedium,
                         color = MaterialTheme.colorScheme.onSurface,
                     )
                     Text(
-                        text = "v${BuildConfig.VERSION_NAME} · by lyssadev",
+                        text = stringResource(R.string.settings_app_version, BuildConfig.VERSION_NAME),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -823,7 +960,7 @@ private fun AboutSection() {
             Column {
                 SettingsActionRow(
                     icon = TablerIcons.Outline.BrandGithub,
-                    title = "Repository",
+                    title = stringResource(R.string.settings_repository),
                     subtitle = "github.com/lyssadev/MintApp",
                     onClick = {
                         runCatching {
@@ -837,8 +974,8 @@ private fun AboutSection() {
                 )
                 SettingsActionRow(
                     icon = TablerIcons.Outline.Refresh,
-                    title = "Check for updates",
-                    subtitle = "You're on v${BuildConfig.VERSION_NAME}",
+                    title = stringResource(R.string.settings_check_updates),
+                    subtitle = stringResource(R.string.settings_check_updates_subtitle, BuildConfig.VERSION_NAME),
                     onClick = {
                         UpdateUiState.manualCheck(context)
                     },
