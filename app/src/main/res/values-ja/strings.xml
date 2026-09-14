@@ -151,4 +151,5 @@
     <string name="notif_downloads_complete_count">%1$d 件のファイルをダウンロードしました</string>
     <string name="notif_more">他 %1$d 件</string>
     <string name="notif_download_failed">ダウンロードに失敗しました — %1$s</string>
+    <string name="home_engines_setting_up">エンジンを準備中...</string>
 </resources>
