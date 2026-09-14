@@ -13,6 +13,10 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.MutableTransitionState
 import androidx.compose.animation.core.tween
@@ -47,6 +51,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
@@ -58,7 +63,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import mint.app.core.prefs.DownloadPreferences
 import mint.app.core.util.Logger
-import mint.app.ui.components.IndeterminateProgressBar
 import mint.app.ui.theme.RobotoMonoMedium
 import mint.app.ui.theme.ThemeController
 import mint.app.ui.theme.applyThemeAwareEdgeToEdge
@@ -244,12 +248,24 @@ private fun SplashScreen(onFinished: () -> Unit) {
         enter = fadeIn(animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing)),
         exit = fadeOut(animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing)),
     ) {
-        Column(
-            modifier = Modifier.fillMaxSize(),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Row(verticalAlignment = Alignment.Bottom) {
+        Box(modifier = Modifier.fillMaxSize()) {
+            val glowTransition = rememberInfiniteTransition(label = "splashGlow")
+            val glowAlpha by glowTransition.animateFloat(
+                initialValue = 0.55f,
+                targetValue = 1f,
+                animationSpec = infiniteRepeatable(
+                    animation = tween(durationMillis = 1100, easing = FastOutSlowInEasing),
+                    repeatMode = RepeatMode.Reverse,
+                ),
+                label = "splashGlowAlpha",
+            )
+
+            Row(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .alpha(glowAlpha),
+                verticalAlignment = Alignment.Bottom,
+            ) {
                 Image(
                     painter = painterResource(R.drawable.logo_m),
                     contentDescription = "Mint logo",
@@ -284,15 +300,14 @@ private fun SplashScreen(onFinished: () -> Unit) {
                     }
                 }
             }
-            Spacer(modifier = Modifier.height(32.dp))
-            IndeterminateProgressBar(
-                modifier = Modifier.fillMaxWidth(0.5f),
-            )
-            Spacer(modifier = Modifier.height(24.dp))
+
             Text(
                 text = "v${BuildConfig.VERSION_NAME}",
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 32.dp),
             )
         }
     }
