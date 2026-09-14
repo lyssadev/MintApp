@@ -107,6 +107,8 @@ sealed interface ResolveState {
     data class Error(val message: String) : ResolveState
 }
 
+val enginesReady: Boolean get() = mint.app.resolution.EngineSetup.ready
+
 object HomeSession {
     var link by mutableStateOf("")
     var state by mutableStateOf<ResolveState>(ResolveState.Idle)
@@ -114,6 +116,7 @@ object HomeSession {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     fun resolveUrl(url: String, fallbackError: String) {
+        if (!mint.app.resolution.EngineSetup.ready) return
         link = url
         activeDownloadId = null
         state = ResolveState.Loading
@@ -344,6 +347,7 @@ private fun HomeHero() {
                         }
                     }
                     IconButton(onClick = {
+                        if (!mint.app.resolution.EngineSetup.ready) return@IconButton
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
                         if (!text.isNullOrBlank()) {
@@ -389,8 +393,9 @@ private fun ResolveResult(
     startDownload: (MediaFormat, Int?) -> Unit,
     compact: Boolean = false,
 ) {
+    val enginesReady = mint.app.resolution.EngineSetup.ready
     AnimatedContent(
-        targetState = HomeSession.state,
+        targetState = enginesReady,
         transitionSpec = {
             (fadeIn(animationSpec = tween(250, easing = FastOutSlowInEasing)) +
                 slideInVertically(animationSpec = tween(250, easing = FastOutSlowInEasing)) { it / 20 }) togetherWith
@@ -398,22 +403,38 @@ private fun ResolveResult(
                     slideOutVertically(animationSpec = tween(200, easing = FastOutSlowInEasing)) { it / 20 })
         },
         label = "resolveState",
-    ) { state ->
-        when (state) {
-            ResolveState.Idle -> Unit
-            ResolveState.Loading -> {
+    ) { engines ->
+        val state = HomeSession.state
+        when {
+            !engines && state == ResolveState.Idle -> {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.home_engines_setting_up),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    IndeterminateProgressBar(
+                        modifier = Modifier.fillMaxWidth(0.5f),
+                    )
+                }
+            }
+            state == ResolveState.Idle -> Unit
+            state == ResolveState.Loading -> {
                 IndeterminateProgressBar(
                     modifier = Modifier.fillMaxWidth(0.5f),
                 )
             }
-            is ResolveState.Error -> {
+            state is ResolveState.Error -> {
                 Text(
                     text = state.message,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
                 )
             }
-            is ResolveState.Success -> {
+            state is ResolveState.Success -> {
                 val info = state.info
                 val allItems = info.imageOptions + info.gifOptions + info.videoOptions
                 when {
