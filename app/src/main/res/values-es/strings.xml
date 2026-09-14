@@ -1,0 +1,154 @@
+<resources>
+    <string name="app_name">Mint</string>
+
+    <!-- Generic actions -->
+    <string name="action_cancel">Cancelar</string>
+    <string name="action_delete">Eliminar</string>
+    <string name="action_close">Cerrar</string>
+    <string name="action_ok">Aceptar</string>
+    <string name="action_update">Actualizar</string>
+    <string name="action_link">Vincular</string>
+    <string name="action_unlink">Desvincular</string>
+    <string name="action_open_settings">Abrir ajustes</string>
+    <string name="action_download">Descargar</string>
+    <string name="action_download_all">Descargar todo (%1$d)</string>
+    <string name="action_remind_later">Recordármelo después</string>
+    <string name="action_continue">Continuar</string>
+
+    <!-- Accessibility descriptions -->
+    <string name="cd_logo">Logotipo de Mint</string>
+    <string name="cd_close">Cerrar</string>
+    <string name="cd_clear_link">Borrar enlace</string>
+    <string name="cd_paste_clipboard">Pegar desde el portapapeles</string>
+    <string name="cd_cancel_download">Cancelar descarga</string>
+    <string name="cd_delete_all">Eliminar todo</string>
+    <string name="cd_delete_download">Eliminar descarga</string>
+    <string name="cd_locate_download">Abrir ubicación de la descarga</string>
+    <string name="cd_selected">Seleccionado</string>
+
+    <!-- Home -->
+    <string name="home_title">Mint</string>
+    <string name="home_link_placeholder">Pega un enlace aquí...</string>
+    <string name="home_supported_platforms">Compatible con YouTube, Instagram, TikTok, X y Pinterest.</string>
+    <string name="home_more_soon">¡Pronto habrá más!</string>
+    <string name="home_error_resolve">No se pudo procesar el enlace</string>
+
+    <string name="downloads_status_downloading">Descargando %1$d%%</string>
+    <string name="downloads_status_complete">Descarga completa</string>
+
+    <!-- Stream info card -->
+    <string name="stream_badge_video">Vídeo</string>
+    <string name="stream_badge_audio">Audio</string>
+    <string name="stream_no_streams">No hay streams disponibles para descargar</string>
+
+    <!-- Downloads -->
+    <string name="downloads_title">Descargas</string>
+    <string name="downloads_section_in_progress">En curso</string>
+    <string name="downloads_section_failed">Con errores</string>
+    <string name="downloads_section_completed">Completadas</string>
+    <string name="downloads_empty">Aún no hay descargas</string>
+    <string name="downloads_status_preparing">Preparando...</string>
+    <string name="downloads_status_processing">Procesando...</string>
+    <string name="downloads_file_deleted">Archivo eliminado</string>
+    <string name="downloads_delete_single_title">¿Eliminar descarga?</string>
+    <string name="downloads_delete_single_message">\"%1$s\" se eliminará permanentemente de tu dispositivo.</string>
+    <string name="downloads_delete_all_title">¿Eliminar todo?</string>
+    <string name="downloads_delete_all_message">Se eliminarán permanentemente de tu dispositivo las %1$d descargas completadas y con errores, incluidos sus archivos.</string>
+
+    <!-- Settings: appearance -->
+    <string name="settings_title">Ajustes</string>
+    <string name="settings_subtitle">Personaliza tu app</string>
+    <string name="settings_appearance">Apariencia</string>
+    <string name="settings_theme">Tema</string>
+    <string name="settings_theme_managed_material_you">Gestionado por Material You</string>
+    <string name="settings_theme_disable_amoled_first">Desactiva AMOLED para cambiar el tema</string>
+    <string name="settings_presets_available">%1$d temas disponibles</string>
+    <string name="settings_mode">Modo</string>
+    <string name="settings_mode_fixed">Modo (fijo en este tema)</string>
+    <string name="settings_mode_light">Claro</string>
+    <string name="settings_mode_dark">Oscuro</string>
+    <string name="settings_mode_system">Sistema</string>
+    <string name="settings_material_you">Material You</string>
+    <string name="settings_material_you_disable_amoled">Desactiva AMOLED para usar Material You</string>
+    <string name="settings_material_you_wallpaper">Colores de tu fondo de pantalla</string>
+    <string name="settings_material_you_requires">Requiere Android 12 o superior</string>
+    <string name="settings_amoled">AMOLED</string>
+    <string name="settings_amoled_description">Fondo negro puro en modo oscuro</string>
+
+    <!-- Settings: connections -->
+    <string name="platform_instagram">Instagram</string>
+    <string name="platform_tiktok">TikTok</string>
+    <string name="platform_pinterest">Pinterest</string>
+    <string name="settings_connections">Cuentas</string>
+    <string name="settings_connection_linked">Vinculada · para descargas de %1$s</string>
+    <string name="settings_connection_login_hint">Inicia sesión para desbloquear todo</string>
+    <string name="settings_connection_unlinked_toast">%1$s desvinculado</string>
+
+    <!-- Settings: downloads -->
+    <string name="settings_downloads_section">Descargas</string>
+    <string name="settings_download_folder">Carpeta de descargas</string>
+    <string name="settings_download_folder_hint">Carpeta base dentro de /sdcard/Download/</string>
+    <string name="settings_videos_folder">Carpeta de vídeos</string>
+    <string name="settings_audios_folder">Carpeta de audios</string>
+    <string name="settings_images_folder">Carpeta de imágenes</string>
+    <string name="settings_subfolder_placeholder">MintApp</string>
+    <string name="settings_videos_placeholder">videos</string>
+    <string name="settings_audios_placeholder">audios</string>
+    <string name="settings_images_placeholder">imágenes</string>
+
+    <!-- Settings: language -->
+    <string name="settings_language">Idioma</string>
+    <string name="settings_language_subtitle">Idioma de la app</string>
+    <string name="language_system">Predeterminado del sistema</string>
+    <string name="language_en">English</string>
+    <string name="language_es">Español</string>
+    <string name="language_pt_br">Português (Brasil)</string>
+    <string name="language_fr">Français</string>
+    <string name="language_de">Deutsch</string>
+    <string name="language_ru">Русский</string>
+    <string name="language_in">Bahasa Indonesia</string>
+    <string name="language_ja">日本語</string>
+
+    <!-- Settings: about -->
+    <string name="settings_about">Acerca de</string>
+    <string name="settings_app_version">v%1$s · por lyssadev</string>
+    <string name="settings_app_version_short">v%1$s</string>
+    <string name="settings_repository">Repositorio</string>
+    <string name="settings_check_updates">Buscar actualizaciones</string>
+    <string name="settings_check_updates_subtitle">Estás en la v%1$s</string>
+
+    <!-- Update dialog -->
+    <string name="update_checking">Buscando actualizaciones</string>
+    <string name="update_checking_detail">Buscando una versión más nueva que la v%1$s</string>
+    <string name="update_up_to_date">Estás al día</string>
+    <string name="update_up_to_date_detail">La v%1$s es la versión más reciente</string>
+    <string name="update_available">Actualización disponible</string>
+    <string name="update_available_detail">%1$s (%2$s) está disponible. Tienes la v%3$s.</string>
+    <string name="update_size">Tamaño: %1$s</string>
+    <string name="update_downloading">Descargando actualización</string>
+    <string name="update_preparing">Preparando descarga...</string>
+    <string name="update_install_permission_title">Se necesita permiso de instalación</string>
+    <string name="update_install_permission_message">Mint necesita permiso para instalar apps de este origen para actualizar a %1$s. Toca el botón de abajo y concédelo; la actualización continuará automáticamente.</string>
+    <string name="update_failed">Error al actualizar</string>
+
+    <!-- Splash / permissions -->
+    <string name="splash_permissions_title">Permisos necesarios</string>
+    <string name="splash_permissions_message">Mint necesita permisos de almacenamiento y notificaciones para descargar archivos.</string>
+    <string name="splash_open_app_settings">Abrir ajustes</string>
+
+    <!-- Login screens -->
+    <string name="login_instagram_title">Iniciar sesión en Instagram</string>
+    <string name="login_tiktok_title">Iniciar sesión en TikTok</string>
+    <string name="login_pinterest_title">Iniciar sesión en Pinterest</string>
+
+    <!-- Notifications -->
+    <string name="notif_channel_name">Descargas</string>
+    <string name="notif_channel_description">Progreso y finalización de descargas</string>
+    <string name="notif_downloading">Descargando...</string>
+    <string name="notif_processing">Procesando...</string>
+    <string name="notif_action_cancel">Cancelar</string>
+    <string name="notif_downloads_complete">Descargas completadas</string>
+    <string name="notif_downloads_complete_count">%1$d archivo(s) descargado(s)</string>
+    <string name="notif_more">+%1$d más</string>
+    <string name="notif_download_failed">Error en la descarga — %1$s</string>
+</resources>
