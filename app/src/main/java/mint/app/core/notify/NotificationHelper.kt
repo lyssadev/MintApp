@@ -29,10 +29,10 @@ object NotificationHelper {
         if (channelCreated) return
         val channel = NotificationChannel(
             CHANNEL_ID,
-            "Downloads",
+            context.getString(R.string.notif_channel_name),
             NotificationManager.IMPORTANCE_LOW,
         ).apply {
-            description = "Download progress and completion"
+            description = context.getString(R.string.notif_channel_description)
         }
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
         nm.createNotificationChannel(channel)
@@ -85,7 +85,7 @@ object NotificationHelper {
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_download_animated)
             .setContentTitle(title)
-            .setContentText(if (indeterminate) "Downloading..." else "$progress%")
+            .setContentText(if (indeterminate) context.getString(R.string.notif_downloading) else "$progress%")
             .setProgress(if (indeterminate) 0 else 100, progress.coerceAtLeast(0), indeterminate)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -100,12 +100,12 @@ object NotificationHelper {
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_download_animated)
             .setContentTitle(title)
-            .setContentText(if (indeterminate) "Downloading..." else "$progress%")
+            .setContentText(if (indeterminate) context.getString(R.string.notif_downloading) else "$progress%")
             .setProgress(if (indeterminate) 0 else 100, progress.coerceAtLeast(0), indeterminate)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(contentIntent(context))
-            .addAction(0, "Cancel", cancelIntent(context, downloadId))
+            .addAction(0, context.getString(R.string.notif_action_cancel), cancelIntent(context, downloadId))
         largeIcon(context, thumbnailUrl)?.let { builder.setLargeIcon(it) }
         nm.notify(idFor(downloadId), builder.build())
     }
@@ -115,12 +115,12 @@ object NotificationHelper {
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_download_animated)
             .setContentTitle(title)
-            .setContentText("Processing...")
+            .setContentText(context.getString(R.string.notif_processing))
             .setProgress(100, 100, true)
             .setOngoing(true)
             .setOnlyAlertOnce(true)
             .setContentIntent(contentIntent(context))
-            .addAction(0, "Cancel", cancelIntent(context, downloadId))
+            .addAction(0, context.getString(R.string.notif_action_cancel), cancelIntent(context, downloadId))
         largeIcon(context, thumbnailUrl)?.let { builder.setLargeIcon(it) }
         nm.notify(idFor(downloadId), builder.build())
     }
@@ -130,15 +130,15 @@ object NotificationHelper {
         val names = completed.map { it.fileName.ifBlank { it.title } }
         val builder = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_notification_check)
-            .setContentTitle("Downloads complete")
-            .setContentText("${names.size} file(s) downloaded")
+            .setContentTitle(context.getString(R.string.notif_downloads_complete))
+            .setContentText(context.getString(R.string.notif_downloads_complete_count, names.size))
             .setAutoCancel(true)
             .setContentIntent(contentIntent(context))
         val inbox = NotificationCompat.InboxStyle()
-            .setBigContentTitle("${names.size} file(s) downloaded")
+            .setBigContentTitle(context.getString(R.string.notif_downloads_complete_count, names.size))
         names.takeLast(10).forEach { inbox.addLine(it) }
         if (names.size > 10) {
-            inbox.setSummaryText("+${names.size - 10} more")
+            inbox.setSummaryText(context.getString(R.string.notif_more, names.size - 10))
         }
         builder.setStyle(inbox)
         nm.notify(COMPLETED_LIST_ID, builder.build())
@@ -149,7 +149,7 @@ object NotificationHelper {
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_warning)
             .setContentTitle(title)
-            .setContentText("Download failed — $error")
+            .setContentText(context.getString(R.string.notif_download_failed, error))
             .setAutoCancel(true)
             .setContentIntent(contentIntent(context))
             .build()
