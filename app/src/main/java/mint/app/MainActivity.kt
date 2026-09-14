@@ -1,10 +1,12 @@
 package mint.app
 
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.LaunchedEffect
+import mint.app.core.prefs.AppLocale
 import mint.app.core.update.AppUpdater
 import mint.app.core.update.UpdateUiState
 import mint.app.resolution.ResolverRegistry
@@ -15,6 +17,10 @@ import mint.app.ui.theme.ThemeController
 import mint.app.ui.theme.applyThemeAwareEdgeToEdge
 
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLocale.apply(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         AppUpdater.cleanup(this)
@@ -52,11 +58,11 @@ class MainActivity : ComponentActivity() {
         when (intent.action) {
             Intent.ACTION_SEND -> {
                 val text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: return
-                extractUrl(text)?.let { HomeSession.resolveUrl(it) }
+                extractUrl(text)?.let { HomeSession.resolveUrl(it, fallbackError = "") }
             }
             Intent.ACTION_VIEW -> {
                 val data = intent.dataString ?: return
-                HomeSession.resolveUrl(data)
+                HomeSession.resolveUrl(data, fallbackError = "")
             }
         }
     }
