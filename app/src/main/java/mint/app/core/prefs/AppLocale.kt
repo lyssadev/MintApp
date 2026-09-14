@@ -24,7 +24,9 @@ object AppLocale {
     fun localeFor(tag: String): Locale? = SUPPORTED.firstOrNull { it.first == tag }?.second
 
     fun systemTag(): String {
-        val sys = Locale.getDefault()
+        val locales = androidx.core.os.ConfigurationCompat
+            .getLocales(android.content.res.Resources.getSystem().configuration)
+        val sys = locales.get(0) ?: Locale.getDefault()
         val full = "${sys.language}-${sys.country}"
         return when {
             SUPPORTED.any { it.first == full } -> full
