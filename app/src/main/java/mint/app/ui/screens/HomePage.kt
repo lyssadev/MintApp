@@ -37,6 +37,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
@@ -79,8 +80,10 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil3.compose.AsyncImage
 import io.github.lyxnx.compose.ui.tablericons.TablerIcons
+import io.github.lyxnx.compose.ui.tablericons.outline.ChevronDown
 import io.github.lyxnx.compose.ui.tablericons.outline.Clipboard
 import io.github.lyxnx.compose.ui.tablericons.outline.Download
+import io.github.lyxnx.compose.ui.tablericons.outline.InfoCircle
 import io.github.lyxnx.compose.ui.tablericons.outline.X
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -96,6 +99,7 @@ import mint.app.R
 import mint.app.service.DownloadService
 import mint.app.resolution.ResolverRegistry
 import mint.app.ui.components.IndeterminateProgressBar
+import mint.app.ui.components.ResolverDetailsDialog
 import mint.app.ui.components.StreamInfoCard
 import mint.app.ui.components.formatBytes
 import mint.app.ui.theme.RobotoMonoMedium
@@ -296,6 +300,7 @@ fun HomePage(
 @Composable
 private fun HomeHero() {
     val context = LocalContext.current
+    var showResolverDetails by remember { mutableStateOf(false) }
 
     val resolve: (String) -> Unit = { url ->
         val trimmed = url.trim()
@@ -367,21 +372,50 @@ private fun HomeHero() {
             stop = MaterialTheme.colorScheme.background,
             fraction = 0.55f,
         )
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
             Text(
                 text = stringResource(R.string.home_supported_platforms),
                 style = MaterialTheme.typography.labelMedium,
                 color = subtleColor,
-                textAlign = TextAlign.Center,
             )
-            Text(
-                text = stringResource(R.string.home_more_soon),
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = subtleColor,
-                textAlign = TextAlign.Center,
-            )
+            Surface(
+                onClick = { showResolverDetails = true },
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(
+                        imageVector = TablerIcons.Outline.InfoCircle,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(12.dp),
+                    )
+                    Text(
+                        text = stringResource(R.string.home_supported_platforms_action),
+                        style = MaterialTheme.typography.labelMedium,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.primary,
+                    )
+                    Icon(
+                        imageVector = TablerIcons.Outline.ChevronDown,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(12.dp),
+                    )
+                }
+            }
         }
+    }
+
+    if (showResolverDetails) {
+        ResolverDetailsDialog(onDismiss = { showResolverDetails = false })
     }
 }
 
