@@ -5,6 +5,7 @@ import mint.app.core.model.MediaItem
 import mint.app.core.util.Logger
 import mint.app.resolution.impl.InstagramResolver
 import mint.app.resolution.impl.PinterestResolver
+import mint.app.resolution.impl.RedditResolver
 import mint.app.resolution.impl.TikTokResolver
 import mint.app.resolution.impl.XResolver
 import mint.app.resolution.impl.YtDlpResolver
@@ -19,6 +20,7 @@ object ResolverRegistry {
         TikTokResolver,
         PinterestResolver,
         XResolver,
+        RedditResolver,
         YtDlpResolver,
     )
 
@@ -44,6 +46,10 @@ object ResolverRegistry {
             host == "pinterest.com" -> true
             host.endsWith(".pinterest.com") -> true
             host.matches(Regex("""(^|\.)pinterest\.[a-z.]+$""")) -> true
+            host == "redd.it" -> true
+            host.endsWith(".redd.it") -> true
+            host == "reddit.com" -> true
+            host.endsWith(".reddit.com") -> true
             else -> false
         }
         Logger.d(TAG, "isSupported: url=$url host=$host supported=$supported")
@@ -53,7 +59,7 @@ object ResolverRegistry {
     suspend fun resolve(url: String): MediaItem {
         if (!isSupported(url)) {
             Logger.w(TAG, "resolve: unsupported link $url")
-            throw Exception("Unsupported link. Only YouTube, YouTube Music, Instagram, TikTok, X and Pinterest are supported.")
+            throw Exception("Unsupported link. Only YouTube, YouTube Music, Instagram, TikTok, X, Pinterest and Reddit are supported.")
         }
         var lastError: Exception? = null
         for (resolver in resolvers) {
