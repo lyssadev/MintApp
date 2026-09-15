@@ -29,8 +29,13 @@
     <!-- Home -->
     <string name="home_title">Mint</string>
     <string name="home_link_placeholder">Link hier einfügen...</string>
-    <string name="home_supported_platforms">Unterstützt YouTube, Instagram, TikTok, X und Pinterest.</string>
-    <string name="home_more_soon">Bald mehr!</string>
+    <string name="home_supported_platforms">Unterstützt einige Plattformen</string>
+    <string name="home_supported_platforms_action">Zum Ansehen tippen</string>
+    <string name="home_resolvers_title">Unterstützte Resolver</string>
+    <string name="capability_video">Video</string>
+    <string name="capability_audio">Audio</string>
+    <string name="capability_image">Bild</string>
+    <string name="capability_gif">GIF</string>
     <string name="home_error_resolve">Link konnte nicht verarbeitet werden</string>
 
     <string name="downloads_status_downloading">Lädt %1$d%%</string>
