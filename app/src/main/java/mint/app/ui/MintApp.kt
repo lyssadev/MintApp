@@ -1,10 +1,15 @@
 package mint.app.ui
 
+import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateContentSize
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.scaleOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,14 +37,17 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import mint.app.core.update.UpdateUiState
 import mint.app.ui.components.UpdateDialog
+import mint.app.resolution.EngineSetup
 import mint.app.ui.components.FloatingBottomBar
 import mint.app.ui.screens.DownloadsScreen
 import mint.app.ui.screens.HomePage
+import mint.app.ui.screens.InitScreen
 import mint.app.ui.screens.SettingsPage
 
 @Composable
 fun MintApp(modifier: Modifier = Modifier) {
     var currentScreen by rememberSaveable { mutableStateOf(Screen.Home) }
+    val showInit = EngineSetup.setupRequired && !EngineSetup.ready
 
     val configuration = LocalConfiguration.current
     val isLandscape = configuration.screenHeightDp < configuration.screenWidthDp
@@ -57,30 +65,55 @@ fun MintApp(modifier: Modifier = Modifier) {
                 }
             }
 
-            if (isLandscape) {
-                LandscapeDualPane(
-                    currentScreen = currentScreen,
-                    onScreenSelected = { currentScreen = it },
-                )
-            } else {
-                Crossfade(
-                    targetState = currentScreen,
-                    animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
-                    label = "screenSwitch",
-                ) { screen ->
-                    when (screen) {
-                        Screen.Home -> HomePage(modifier = Modifier.fillMaxSize())
-                        Screen.Downloads -> DownloadsScreen(modifier = Modifier.fillMaxSize())
-                        Screen.Settings -> SettingsPage(modifier = Modifier.fillMaxSize())
+            AnimatedContent(
+                targetState = showInit,
+                transitionSpec = {
+                    if (targetState) {
+                        fadeIn(animationSpec = tween(durationMillis = 450, easing = FastOutSlowInEasing)) togetherWith
+                            fadeOut(animationSpec = tween(durationMillis = 200, easing = FastOutSlowInEasing))
+                    } else {
+                        fadeIn(animationSpec = tween(durationMillis = 450, easing = FastOutSlowInEasing)) togetherWith
+                            fadeOut(animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing)) +
+                            scaleOut(targetScale = 0.96f, animationSpec = tween(durationMillis = 500, easing = FastOutSlowInEasing))
+                    }
+                },
+                label = "initSwitch",
+            ) { init ->
+                if (init) {
+                    InitScreen(modifier = Modifier.fillMaxSize())
+                } else {
+                    if (isLandscape) {
+                        LandscapeDualPane(
+                            currentScreen = currentScreen,
+                            onScreenSelected = { currentScreen = it },
+                        )
+                    } else {
+                        Crossfade(
+                            targetState = currentScreen,
+                            animationSpec = tween(durationMillis = 400, easing = FastOutSlowInEasing),
+                            label = "screenSwitch",
+                        ) { screen ->
+                            when (screen) {
+                                Screen.Home -> HomePage(modifier = Modifier.fillMaxSize())
+                                Screen.Downloads -> DownloadsScreen(modifier = Modifier.fillMaxSize())
+                                Screen.Settings -> SettingsPage(modifier = Modifier.fillMaxSize())
+                            }
+                        }
                     }
                 }
             }
 
-            FloatingBottomBar(
-                selectedScreen = currentScreen,
-                onScreenSelected = { currentScreen = it },
+            androidx.compose.animation.AnimatedVisibility(
+                visible = !showInit,
+                enter = fadeIn(animationSpec = tween(durationMillis = 450, easing = FastOutSlowInEasing)),
+                exit = fadeOut(animationSpec = tween(durationMillis = 250, easing = FastOutSlowInEasing)),
                 modifier = Modifier.align(Alignment.BottomCenter),
-            )
+            ) {
+                FloatingBottomBar(
+                    selectedScreen = currentScreen,
+                    onScreenSelected = { currentScreen = it },
+                )
+            }
             UpdateDialog()
         }
     }
