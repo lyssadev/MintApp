@@ -29,8 +29,20 @@
     <!-- Home -->
     <string name="home_title">Mint</string>
     <string name="home_link_placeholder">Paste link here...</string>
-    <string name="home_supported_platforms">We support YouTube, Instagram, TikTok, X &amp; Pinterest.</string>
-    <string name="home_more_soon">More soon!</string>
+    <string name="home_supported_platforms">We support some platforms</string>
+    <string name="home_supported_platforms_action">Click here to check</string>
+
+    <!-- Platforms -->
+    <string name="platform_youtube">YouTube</string>
+    <string name="platform_x">X</string>
+    <string name="platform_reddit">Reddit</string>
+
+    <!-- Resolvers dialog -->
+    <string name="home_resolvers_title">Supported resolvers</string>
+    <string name="capability_video">Video</string>
+    <string name="capability_audio">Audio</string>
+    <string name="capability_image">Image</string>
+    <string name="capability_gif">GIF</string>
     <string name="home_error_resolve">Couldn\'t resolve link</string>
 
     <!-- Init -->
