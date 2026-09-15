@@ -32,7 +32,9 @@
     <string name="home_supported_platforms">We support YouTube, Instagram, TikTok, X &amp; Pinterest.</string>
     <string name="home_more_soon">More soon!</string>
     <string name="home_error_resolve">Couldn\'t resolve link</string>
-    <string name="home_engines_setting_up">Setting the engines up...</string>
+
+    <!-- Init -->
+    <string name="init_engines_setting_up">Setting the engines up...</string>
 
     <string name="downloads_status_downloading">Downloading %1$d%%</string>
     <string name="downloads_status_complete">Download complete</string>
