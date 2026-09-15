@@ -29,8 +29,13 @@
     <!-- Home -->
     <string name="home_title">Mint</string>
     <string name="home_link_placeholder">ここにリンクを貼り付け...</string>
-    <string name="home_supported_platforms">YouTube、Instagram、TikTok、X、Pinterest に対応。</string>
-    <string name="home_more_soon">近日対応予定！</string>
+    <string name="home_supported_platforms">一部のプラットフォームに対応</string>
+    <string name="home_supported_platforms_action">タップして確認</string>
+    <string name="home_resolvers_title">対応リゾルバ</string>
+    <string name="capability_video">動画</string>
+    <string name="capability_audio">音声</string>
+    <string name="capability_image">画像</string>
+    <string name="capability_gif">GIF</string>
     <string name="home_error_resolve">リンクを処理できませんでした</string>
 
     <string name="downloads_status_downloading">ダウンロード中 %1$d%%</string>
