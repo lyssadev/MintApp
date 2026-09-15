@@ -29,8 +29,13 @@
     <!-- Home -->
     <string name="home_title">Mint</string>
     <string name="home_link_placeholder">Вставьте ссылку сюда...</string>
-    <string name="home_supported_platforms">Поддерживаются YouTube, Instagram, TikTok, X и Pinterest.</string>
-    <string name="home_more_soon">Скоро будет больше!</string>
+    <string name="home_supported_platforms">Поддерживаются некоторые платформы</string>
+    <string name="home_supported_platforms_action">Нажмите, чтобы посмотреть</string>
+    <string name="home_resolvers_title">Поддерживаемые резолверы</string>
+    <string name="capability_video">Видео</string>
+    <string name="capability_audio">Аудио</string>
+    <string name="capability_image">Изображение</string>
+    <string name="capability_gif">GIF</string>
     <string name="home_error_resolve">Не удалось обработать ссылку</string>
 
     <string name="downloads_status_downloading">Загрузка %1$d%%</string>
