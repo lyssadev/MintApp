@@ -107,8 +107,6 @@ sealed interface ResolveState {
     data class Error(val message: String) : ResolveState
 }
 
-val enginesReady: Boolean get() = mint.app.resolution.EngineSetup.ready
-
 object HomeSession {
     var link by mutableStateOf("")
     var state by mutableStateOf<ResolveState>(ResolveState.Idle)
@@ -116,12 +114,12 @@ object HomeSession {
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     fun resolveUrl(url: String, fallbackError: String) {
-        if (!mint.app.resolution.EngineSetup.ready) return
         link = url
         activeDownloadId = null
         state = ResolveState.Loading
         scope.launch {
             state = try {
+                mint.app.resolution.EngineSetup.await()
                 ResolveState.Success(ResolverRegistry.resolve(url))
             } catch (e: Exception) {
                 ResolveState.Error(e.message ?: fallbackError)
@@ -347,7 +345,6 @@ private fun HomeHero() {
                         }
                     }
                     IconButton(onClick = {
-                        if (!mint.app.resolution.EngineSetup.ready) return@IconButton
                         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
                         val text = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
                         if (!text.isNullOrBlank()) {
@@ -393,9 +390,8 @@ private fun ResolveResult(
     startDownload: (MediaFormat, Int?) -> Unit,
     compact: Boolean = false,
 ) {
-    val enginesReady = mint.app.resolution.EngineSetup.ready
     AnimatedContent(
-        targetState = enginesReady,
+        targetState = HomeSession.state,
         transitionSpec = {
             (fadeIn(animationSpec = tween(250, easing = FastOutSlowInEasing)) +
                 slideInVertically(animationSpec = tween(250, easing = FastOutSlowInEasing)) { it / 20 }) togetherWith
@@ -403,24 +399,8 @@ private fun ResolveResult(
                     slideOutVertically(animationSpec = tween(200, easing = FastOutSlowInEasing)) { it / 20 })
         },
         label = "resolveState",
-    ) { engines ->
-        val state = HomeSession.state
+    ) { state ->
         when {
-            !engines && state == ResolveState.Idle -> {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                ) {
-                    Text(
-                        text = stringResource(R.string.home_engines_setting_up),
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                    IndeterminateProgressBar(
-                        modifier = Modifier.fillMaxWidth(0.5f),
-                    )
-                }
-            }
             state == ResolveState.Idle -> Unit
             state == ResolveState.Loading -> {
                 IndeterminateProgressBar(
