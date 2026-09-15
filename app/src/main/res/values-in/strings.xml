@@ -29,8 +29,13 @@
     <!-- Home -->
     <string name="home_title">Mint</string>
     <string name="home_link_placeholder">Tempel tautan di sini...</string>
-    <string name="home_supported_platforms">Mendukung YouTube, Instagram, TikTok, X, dan Pinterest.</string>
-    <string name="home_more_soon">Segera hadir!</string>
+    <string name="home_supported_platforms">Mendukung beberapa platform</string>
+    <string name="home_supported_platforms_action">Ketuk di sini untuk melihat</string>
+    <string name="home_resolvers_title">Resolver yang didukung</string>
+    <string name="capability_video">Video</string>
+    <string name="capability_audio">Audio</string>
+    <string name="capability_image">Gambar</string>
+    <string name="capability_gif">GIF</string>
     <string name="home_error_resolve">Tautan tidak dapat diproses</string>
 
     <string name="downloads_status_downloading">Mengunduh %1$d%%</string>
