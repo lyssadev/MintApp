@@ -35,6 +35,16 @@ object RedditResolver : Resolver {
 	private val CONTENT_HREF_RE = Regex("content-href=\"([^\"]+)\"")
 	private val VIDEO_ID_RE = Regex("""https?://v\.redd\.it/([A-Za-z0-9]+)""")
 	private val IMAGE_HREF_RE = Regex("""https?://i\.redd\.it/([A-Za-z0-9]+)\.([A-Za-z0-9]+)""")
+	private val H1_RE = Regex("""<h1[^>]*>([^<>]{1,300})</h1>""", RegexOption.IGNORE_CASE)
+	private val USER_RE = Regex("""reddit\.com/user/([A-Za-z0-9_-]{1,32})""", RegexOption.IGNORE_CASE)
+	private val HLS_ID_RE = Regex("""https://v\.redd\.it/([A-Za-z0-9]+)/HLSPlaylist\.m3u8""")
+	private val IMG_SRC_RE = Regex("""<img[^>]*\ssrc="([^"]+)"""", RegexOption.IGNORE_CASE)
+	private val HLS_ATTR_RE = Regex("""([A-Z0-9-]+)=("[^"]*"|[^,]*)""")
+	private val HLS_VARIANT_RE = Regex("""#EXT-X-STREAM-INF:([^\r\n]*)\r?\n([^\r\n#]+)""")
+	private val HLS_MEDIA_RE = Regex("""#EXT-X-MEDIA:([^\r\n]*)""")
+	private val HLS_EXTINF_RE = Regex("""#EXTINF:([0-9.]+)""")
+	private val HLS_BYTERANGE_RE = Regex("""#EXT-X-BYTERANGE:(\d+)""")
+	private val HLS_MAP_BYTES_RE = Regex("""#EXT-X-MAP:[^\r\n]*BYTERANGE="(\d+)""")
 	private val PREVIEW_RE = Regex(
 		"""https://preview\.redd\.it/[A-Za-z0-9_-]+-v0-([A-Za-z0-9]+)\.(jpg|jpeg|png|gif|webp)""",
 		RegexOption.IGNORE_CASE,
@@ -71,6 +81,8 @@ object RedditResolver : Resolver {
 
 	private data class Choice(val format: MediaFormat, val durationSeconds: Int)
 
+	private data class HlsVariant(val url: String, val height: Int, val bitrate: Long, val audioGroup: String?)
+
 	private data class Page(
 		val title: String,
 		val author: String,
@@ -78,6 +90,7 @@ object RedditResolver : Resolver {
 		val packaged: String?,
 		val mediaHref: String?,
 		val gallery: List<GalleryEntry>,
+		val playerVideoId: String?,
 	)
 
 	override fun initialize(context: Context) = Unit
@@ -110,22 +123,30 @@ object RedditResolver : Resolver {
 		val id = extractedId ?: throw Exception("Could not find a Reddit post in this link.")
 		Logger.d(TAG, "resolve: postId=$id subreddit=$subreddit")
 
-		var page = fetchPage("$PAGE_BASE/comments/$id/")?.let { parsePage(it) }
+		val pageHtml = fetchPage("$PAGE_BASE/comments/$id/")
+		var loaded = pageHtml != null
+		var page = pageHtml?.let { parsePage(it) }
 		if (page == null) {
 			if (subreddit == null) {
 				subreddit = canonicalUrl(input)?.let { SUB_RE.find(it)?.groupValues?.get(1) }
 			}
 			Logger.d(TAG, "resolve: falling back to embed, subreddit=$subreddit")
-			page = subreddit?.let { sub ->
-				fetchPage("$EMBED_BASE/r/$sub/comments/$id/")?.let { parsePage(it) }
-			}
+			val embedHtml = subreddit?.let { sub -> fetchPage("$EMBED_BASE/r/$sub/comments/$id/") }
+			loaded = loaded || embedHtml != null
+			page = embedHtml?.let { parsePage(it) }
 		}
-		val parsed = page
-			?: throw Exception("Could not read this Reddit post. It may be private, removed or blocked on this network.")
+		val parsed = page ?: throw Exception(
+			if (loaded) {
+				"Could not find downloadable media in this Reddit post."
+			} else {
+				"Could not read this Reddit post. It may be private, removed or blocked on this network."
+			},
+		)
 
 		Logger.d(
 			TAG,
-			"resolve: postId=$id packaged=${parsed.packaged != null} gallery=${parsed.gallery.size}",
+			"resolve: postId=$id packaged=${parsed.packaged != null} gallery=${parsed.gallery.size} " +
+				"playerVideo=${parsed.playerVideoId}",
 		)
 		buildItem(input, parsed)
 	}
@@ -186,7 +207,8 @@ object RedditResolver : Resolver {
 				val format = imageFormat(index + 1, entry.mediaId, entry.ext)
 				if (entry.ext == "gif") gifs += format else images += format
 			}
-			Logger.d(TAG, "buildItem: carousel images=${images.size} gifs=${gifs.size}")
+			val videos = listOfNotNull(videoChoice(page)?.format)
+			Logger.d(TAG, "buildItem: carousel images=${images.size} gifs=${gifs.size} videos=${videos.size}")
 			return MediaItem(
 				originalUrl = input,
 				title = page.title,
@@ -196,7 +218,7 @@ object RedditResolver : Resolver {
 				isMusicOnly = false,
 				streamType = "IMAGE",
 				platform = "reddit",
-				videoOptions = emptyList(),
+				videoOptions = videos,
 				audioOptions = emptyList(),
 				imageOptions = images,
 				gifOptions = gifs,
@@ -246,18 +268,24 @@ object RedditResolver : Resolver {
 		val packaged = PACKAGED_RE.find(html)?.groupValues?.get(1)?.let { unescape(it) }
 		val mediaHref = CONTENT_HREF_RE.find(html)?.groupValues?.get(1)?.let { unescape(it) }
 		val gallery = galleryEntries(html)
+		val playerVideoId = HLS_ID_RE.find(html)?.groupValues?.get(1)
 		val postType = POST_TYPE_RE.find(html)?.groupValues?.get(1)
 		Logger.d(
 			TAG,
-			"parsePage: postType=$postType packaged=${packaged != null} gallery=${gallery.size} href=$mediaHref",
+			"parsePage: postType=$postType packaged=${packaged != null} gallery=${gallery.size} " +
+				"playerVideo=$playerVideoId href=$mediaHref",
 		)
-		if (packaged == null && gallery.isEmpty() && mediaHref == null) return null
+		if (packaged == null && gallery.isEmpty() && mediaHref == null && playerVideoId == null) {
+			return null
+		}
 
 		val title = TITLE_RE.find(html)?.groupValues?.get(1)?.let { unescape(it) }
 			?.takeIf { it.isNotBlank() }
+			?: H1_RE.find(html)?.groupValues?.get(1)?.let { unescape(it) }?.takeIf { it.isNotBlank() }
 			?: "Reddit post"
 		val author = AUTHOR_RE.find(html)?.groupValues?.get(1)?.let { unescape(it) }
 			?.takeIf { it.isNotBlank() }
+			?: USER_RE.find(html)?.groupValues?.get(1)?.takeIf { it.isNotBlank() }
 			?: "reddit"
 		val poster = POSTER_RE.find(html)?.groupValues?.get(1)?.let { unescape(it) }
 
@@ -268,25 +296,35 @@ object RedditResolver : Resolver {
 			packaged = packaged,
 			mediaHref = mediaHref,
 			gallery = gallery,
+			playerVideoId = playerVideoId,
 		)
 	}
 
 	private fun galleryEntries(html: String): List<GalleryEntry> {
 		val seen = mutableSetOf<String>()
-		val entries = mutableListOf<GalleryEntry>()
+		val entries = mutableListOf<Pair<Int, GalleryEntry>>()
 		PREVIEW_RE.findAll(html).forEach { match ->
 			val mediaId = match.groupValues[1]
 			val ext = normalizeExt(match.groupValues[2])
 			if (seen.add("$mediaId.$ext")) {
-				entries += GalleryEntry(mediaId, ext, match.value)
+				entries += match.range.first to GalleryEntry(mediaId, ext, match.value)
 			}
 		}
-		return entries
+		IMG_SRC_RE.findAll(html).forEach { match ->
+			val href = unescape(match.groupValues[1])
+			val image = imageFromHref(href) ?: return@forEach
+			if (seen.add("${image.first}.${image.second}")) {
+				entries += match.range.first to GalleryEntry(image.first, image.second, href)
+			}
+		}
+		return entries.sortedBy { it.first }.map { it.second }
 	}
 
 	private fun videoChoice(page: Page): Choice? {
 		packagedChoice(page.packaged)?.let { return it }
-		val mediaId = page.mediaHref?.let { VIDEO_ID_RE.find(it)?.groupValues?.get(1) } ?: return null
+		val mediaId = page.mediaHref?.let { VIDEO_ID_RE.find(it)?.groupValues?.get(1) }
+			?: page.playerVideoId
+			?: return null
 		return hlsChoice(mediaId)
 	}
 
@@ -325,18 +363,78 @@ object RedditResolver : Resolver {
 		)
 	}
 
-	private fun hlsChoice(mediaId: String): Choice = Choice(
-		format = MediaFormat(
-			label = "Best · mp4",
-			format = "mp4",
-			formatId = "hls",
-			url = "$VIDEO_BASE/$mediaId/HLSPlaylist.m3u8",
-			estimatedSizeBytes = 0,
-			hasAudio = true,
-			httpHeaders = mediaHeaders,
-		),
-		durationSeconds = 0,
-	)
+	private fun hlsChoice(mediaId: String): Choice {
+		val url = "$VIDEO_BASE/$mediaId/HLSPlaylist.m3u8"
+		val master = fetchPage(url)
+		val variants = master?.let { hlsVariants(url, it) }.orEmpty()
+		val variant = variants.maxWithOrNull(compareBy({ it.height }, { it.bitrate }))
+		val playlist = variant?.let { fetchPage(it.url) } ?: master
+		val durationSeconds = playlist?.let { playlistDurationSeconds(it) } ?: 0
+		var sizeBytes = playlist?.let { playlistBytes(it) } ?: 0L
+		if (master != null && variant?.audioGroup != null) {
+			sizeBytes += hlsAudioUrl(url, master, variant.audioGroup)
+				?.let { fetchPage(it) }
+				?.let { playlistBytes(it) }
+				?: 0L
+		}
+		if (sizeBytes <= 0L && variant != null && durationSeconds > 0) {
+			sizeBytes = variant.bitrate / 8L * durationSeconds
+		}
+		Logger.d(
+			TAG,
+			"hlsChoice: mediaId=$mediaId variants=${variants.size} duration=${durationSeconds}s size=$sizeBytes",
+		)
+		return Choice(
+			format = MediaFormat(
+				label = "Best · mp4",
+				format = "mp4",
+				formatId = "hls",
+				url = url,
+				estimatedSizeBytes = sizeBytes,
+				hasAudio = true,
+				httpHeaders = mediaHeaders,
+			),
+			durationSeconds = durationSeconds,
+		)
+	}
+
+	private fun hlsVariants(playlistUrl: String, master: String): List<HlsVariant> {
+		val base = playlistUrl.substringBeforeLast('/')
+		return HLS_VARIANT_RE.findAll(master).mapNotNull { match ->
+			val uri = match.groupValues[2].trim()
+			if (uri.isBlank()) return@mapNotNull null
+			val attrs = hlsAttrs(match.groupValues[1])
+			HlsVariant(
+				url = absoluteUrl(base, uri),
+				height = attrs["RESOLUTION"]?.substringAfter('x')?.toIntOrNull() ?: 0,
+				bitrate = (attrs["AVERAGE-BANDWIDTH"] ?: attrs["BANDWIDTH"])?.toLongOrNull() ?: 0L,
+				audioGroup = attrs["AUDIO"],
+			)
+		}.toList()
+	}
+
+	private fun hlsAudioUrl(playlistUrl: String, master: String, group: String): String? =
+		HLS_MEDIA_RE.findAll(master)
+			.map { hlsAttrs(it.groupValues[1]) }
+			.firstOrNull { it["TYPE"] == "AUDIO" && it["GROUP-ID"] == group }
+			?.get("URI")
+			?.let { absoluteUrl(playlistUrl.substringBeforeLast('/'), it) }
+
+	private fun hlsAttrs(tag: String): Map<String, String> =
+		HLS_ATTR_RE.findAll(tag).associate { it.groupValues[1] to it.groupValues[2].trim('"') }
+
+	private fun absoluteUrl(base: String, uri: String): String =
+		if (uri.startsWith("http")) uri else "$base/${uri.trimStart('/')}"
+
+	private fun playlistDurationSeconds(playlist: String): Int =
+		HLS_EXTINF_RE.findAll(playlist).sumOf { it.groupValues[1].toDoubleOrNull() ?: 0.0 }.toInt()
+
+	private fun playlistBytes(playlist: String): Long {
+		var total = 0L
+		HLS_BYTERANGE_RE.findAll(playlist).forEach { total += it.groupValues[1].toLongOrNull() ?: 0L }
+		HLS_MAP_BYTES_RE.findAll(playlist).forEach { total += it.groupValues[1].toLongOrNull() ?: 0L }
+		return total
+	}
 
 	private fun imageFromHref(href: String?): Pair<String, String>? {
 		val match = href?.let { IMAGE_HREF_RE.find(it) } ?: return null
