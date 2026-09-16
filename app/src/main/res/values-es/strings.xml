@@ -122,6 +122,11 @@
     <string name="settings_check_updates">Buscar actualizaciones</string>
     <string name="settings_check_updates_subtitle">Estás en la v%1$s</string>
 
+    <!-- Settings: debug -->
+    <string name="settings_debug_section">Depuración</string>
+    <string name="settings_debug_logger">Logger</string>
+    <string name="settings_debug_logger_subtitle">Escribe logs de depuración en logcat (prefijo de tag: Mint.)</string>
+
     <!-- Update dialog -->
     <string name="update_checking">Buscando actualizaciones</string>
     <string name="update_checking_detail">Buscando una versión más nueva que la v%1$s</string>
