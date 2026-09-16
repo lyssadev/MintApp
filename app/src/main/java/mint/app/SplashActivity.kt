@@ -92,7 +92,7 @@ class SplashActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        Logger.enabled = BuildConfig.DEBUG
+        Logger.enabled = BuildConfig.DEBUG || DownloadPreferences.loggerEnabled(this)
         ThemeController.init(this)
         applyThemeAwareEdgeToEdge()
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
