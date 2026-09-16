@@ -65,6 +65,7 @@ import io.github.lyxnx.compose.ui.tablericons.outline.BrandGithub
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandInstagram
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandPinterest
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandTiktok
+import io.github.lyxnx.compose.ui.tablericons.outline.Bug
 import io.github.lyxnx.compose.ui.tablericons.outline.Check
 import io.github.lyxnx.compose.ui.tablericons.outline.ChevronRight
 import io.github.lyxnx.compose.ui.tablericons.outline.Language
@@ -84,6 +85,7 @@ import mint.app.connection.TikTokLoginActivity
 import mint.app.core.prefs.AppLocale
 import mint.app.core.prefs.ConnectionPreferences
 import mint.app.core.prefs.DownloadPreferences
+import mint.app.core.util.Logger
 import mint.app.core.prefs.LanguagePreferences
 import mint.app.core.update.UpdateUiState
 import mint.app.resolution.impl.InstagramResolver
@@ -123,6 +125,7 @@ fun SettingsPage(modifier: Modifier = Modifier) {
         ConnectionsSection()
         DownloadsSection()
         AboutSection()
+        LoggerSection()
         Spacer(modifier = Modifier.height(120.dp))
     }
 
@@ -1002,6 +1005,61 @@ private fun AboutSection() {
                     subtitle = stringResource(R.string.settings_check_updates_subtitle, BuildConfig.VERSION_NAME),
                     onClick = {
                         UpdateUiState.manualCheck(context)
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun LoggerSection() {
+    val context = LocalContext.current
+    var enabled by remember { mutableStateOf(DownloadPreferences.loggerEnabled(context)) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = stringResource(R.string.settings_debug_section),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+        ) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = TablerIcons.Outline.Bug,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_debug_logger),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_debug_logger_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = { checked ->
+                        enabled = checked
+                        DownloadPreferences.setLoggerEnabled(context, checked)
+                        Logger.enabled = checked
                     },
                 )
             }
