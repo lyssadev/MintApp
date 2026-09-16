@@ -11,6 +11,7 @@ object DownloadPreferences {
     private const val KEY_AUDIO_DIR = "audio_dir"
     private const val KEY_IMAGE_DIR = "image_dir"
     private const val KEY_PERMISSIONS_ASKED = "permissions_asked"
+    private const val KEY_LOGGER_ENABLED = "logger_enabled"
 
     fun subfolder(context: Context): String =
         prefs(context).getString(KEY_SUBFOLDER, "MintApp") ?: "MintApp"
@@ -45,6 +46,13 @@ object DownloadPreferences {
 
     fun setPermissionsAsked(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_PERMISSIONS_ASKED, value).apply()
+    }
+
+    fun loggerEnabled(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_LOGGER_ENABLED, false)
+
+    fun setLoggerEnabled(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_LOGGER_ENABLED, value).apply()
     }
 
     private fun prefs(context: Context): SharedPreferences =
