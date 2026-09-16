@@ -122,6 +122,11 @@
     <string name="settings_check_updates">アップデートを確認</string>
     <string name="settings_check_updates_subtitle">現在 v%1$s</string>
 
+    <!-- Settings: debug -->
+    <string name="settings_debug_section">デバッグ</string>
+    <string name="settings_debug_logger">ロガー</string>
+    <string name="settings_debug_logger_subtitle">logcat にデバッグログを出力します（タグの接頭辞: Mint.）</string>
+
     <!-- Update dialog -->
     <string name="update_checking">アップデートを確認中</string>
     <string name="update_checking_detail">v%1$s より新しいバージョンを探しています</string>
