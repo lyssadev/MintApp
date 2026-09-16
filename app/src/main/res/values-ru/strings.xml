@@ -122,6 +122,11 @@
     <string name="settings_check_updates">Проверить обновления</string>
     <string name="settings_check_updates_subtitle">У вас v%1$s</string>
 
+    <!-- Settings: debug -->
+    <string name="settings_debug_section">Отладка</string>
+    <string name="settings_debug_logger">Логгер</string>
+    <string name="settings_debug_logger_subtitle">Пишет отладочные логи в logcat (префикс тега: Mint.)</string>
+
     <!-- Update dialog -->
     <string name="update_checking">Проверка обновлений</string>
     <string name="update_checking_detail">Поиск версии новее v%1$s</string>
