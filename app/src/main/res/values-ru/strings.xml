@@ -97,6 +97,8 @@
     <string name="settings_resolver_local">Локальный</string>
     <string name="settings_resolver_local_subtitle">Встроенный движок yt-dlp</string>
     <string name="settings_resolver_online_subtitle">Онлайн-конвертер</string>
+    <string name="settings_resolvers_info">Пока доступны только эти.</string>
+    <string name="resolver_online_tag">Онлайн</string>
 
     <!-- Settings: downloads -->
     <string name="settings_downloads_section">Загрузки</string>

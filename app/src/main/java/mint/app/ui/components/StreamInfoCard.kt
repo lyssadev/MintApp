@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -32,6 +33,7 @@ fun StreamInfoCard(
     onOptionClick: (MediaFormat) -> Unit,
     modifier: Modifier = Modifier,
     compact: Boolean = false,
+    startingOptionId: String? = null,
 ) {
     Surface(
         modifier = modifier.fillMaxWidth(),
@@ -118,7 +120,7 @@ fun StreamInfoCard(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                OptionChips(info.videoOptions, downloading, onOptionClick)
+                OptionChips(info.videoOptions, downloading, startingOptionId, onOptionClick)
             }
             if (info.audioOptions.isNotEmpty()) {
                 Text(
@@ -126,7 +128,7 @@ fun StreamInfoCard(
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
-                OptionChips(info.audioOptions, downloading, onOptionClick)
+                OptionChips(info.audioOptions, downloading, startingOptionId, onOptionClick)
             }
             if (info.videoOptions.isEmpty() && info.audioOptions.isEmpty()) {
                 Text(
@@ -143,32 +145,42 @@ fun StreamInfoCard(
 private fun OptionChips(
     options: List<MediaFormat>,
     downloading: Boolean,
+    startingOptionId: String?,
     onOptionClick: (MediaFormat) -> Unit,
 ) {
+    val blocked = downloading || startingOptionId != null
     Column(
         verticalArrangement = Arrangement.spacedBy(8.dp),
     ) {
         options.forEach { option ->
+            val isStarting = option.formatId == startingOptionId
             Surface(
                 shape = RoundedCornerShape(10.dp),
-                color = if (downloading) {
+                color = if (blocked) {
                     MaterialTheme.colorScheme.surfaceContainerHighest
                 } else {
                     MaterialTheme.colorScheme.primaryContainer
                 },
                 modifier = Modifier
                     .clip(RoundedCornerShape(10.dp))
-                    .clickable(enabled = !downloading) { onOptionClick(option) },
+                    .clickable(enabled = !blocked) { onOptionClick(option) },
             ) {
                 Row(
                     modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
                 ) {
+                    if (isStarting) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(12.dp),
+                            strokeWidth = 1.5.dp,
+                            color = MaterialTheme.colorScheme.primary,
+                        )
+                    }
                     Text(
                         text = option.label,
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (downloading) {
+                        color = if (blocked) {
                             MaterialTheme.colorScheme.onSurfaceVariant
                         } else {
                             MaterialTheme.colorScheme.onPrimaryContainer
@@ -178,7 +190,7 @@ private fun OptionChips(
                         Text(
                             text = "· ${formatBytes(option.estimatedSizeBytes)}",
                             style = MaterialTheme.typography.labelSmall,
-                            color = if (downloading) {
+                            color = if (blocked) {
                                 MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                             } else {
                                 MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)

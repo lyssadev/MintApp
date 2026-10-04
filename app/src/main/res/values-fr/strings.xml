@@ -97,6 +97,8 @@
     <string name="settings_resolver_local">Local</string>
     <string name="settings_resolver_local_subtitle">Moteur yt-dlp intégré</string>
     <string name="settings_resolver_online_subtitle">Convertisseur en ligne</string>
+    <string name="settings_resolvers_info">Uniquement ceux-ci pour le moment.</string>
+    <string name="resolver_online_tag">En ligne</string>
 
     <!-- Settings: downloads -->
     <string name="settings_downloads_section">Téléchargements</string>

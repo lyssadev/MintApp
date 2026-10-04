@@ -600,6 +600,11 @@ private fun ResolversSection() {
                 ResolverModeButton(mode = mode, onClick = { showDialog = true })
             }
         }
+        Text(
+            text = stringResource(R.string.settings_resolvers_info),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 
     if (showDialog) {

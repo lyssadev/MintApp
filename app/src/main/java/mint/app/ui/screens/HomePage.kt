@@ -115,11 +115,13 @@ object HomeSession {
     var link by mutableStateOf("")
     var state by mutableStateOf<ResolveState>(ResolveState.Idle)
     var activeDownloadId by mutableStateOf<String?>(null)
+    var startingFormatId by mutableStateOf<String?>(null)
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
 
     fun resolveUrl(url: String, fallbackError: String) {
         link = url
         activeDownloadId = null
+        startingFormatId = null
         state = ResolveState.Loading
         scope.launch {
             state = try {
@@ -133,6 +135,7 @@ object HomeSession {
 
     fun reset() {
         activeDownloadId = null
+        startingFormatId = null
         state = ResolveState.Idle
     }
 }
@@ -152,29 +155,37 @@ fun HomePage(
         val info = (HomeSession.state as? ResolveState.Success)?.info
         if (info != null) {
             val title = if (index != null) "${info.title} (${index + 1})" else info.title
-            HomeSession.scope.launch {
-                val resolved = if (info.directDownload) {
-                    runCatching { ResolverRegistry.resolveDownloadUrl(info, option) }.getOrNull()
-                } else {
-                    null
+            val trackStart = info.directDownload
+            if (!trackStart || HomeSession.startingFormatId == null) {
+                if (trackStart) HomeSession.startingFormatId = option.formatId
+                HomeSession.scope.launch {
+                    try {
+                        val resolved = if (trackStart) {
+                            runCatching { ResolverRegistry.resolveDownloadUrl(info, option) }.getOrNull()
+                        } else {
+                            null
+                        }
+                        val directUrl = when {
+                            resolved != null -> resolved
+                            info.platform == "youtube" -> null
+                            else -> option.url
+                        }
+                        DownloadService.start(
+                            context,
+                            info.originalUrl,
+                            if (trackStart) "" else option.formatId,
+                            title,
+                            option.format,
+                            option.estimatedSizeBytes,
+                            option.hasAudio,
+                            info.thumbnailUrl,
+                            directUrl,
+                            option.httpHeaders,
+                        )
+                    } finally {
+                        if (trackStart) HomeSession.startingFormatId = null
+                    }
                 }
-                val directUrl = when {
-                    resolved != null -> resolved
-                    info.platform == "youtube" -> null
-                    else -> option.url
-                }
-                DownloadService.start(
-                    context,
-                    info.originalUrl,
-                    if (info.directDownload) "" else option.formatId,
-                    title,
-                    option.format,
-                    option.estimatedSizeBytes,
-                    option.hasAudio,
-                    info.thumbnailUrl,
-                    directUrl,
-                    option.httpHeaders,
-                )
             }
         }
     }
@@ -475,6 +486,7 @@ private fun ResolveResult(
                     info.platform == "youtube" -> StreamInfoCard(
                         info = info,
                         downloading = false,
+                        startingOptionId = HomeSession.startingFormatId,
                         onOptionClick = { option -> startDownload(option, null) },
                         compact = compact,
                     )

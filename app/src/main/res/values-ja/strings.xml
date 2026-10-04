@@ -97,6 +97,8 @@
     <string name="settings_resolver_local">ローカル</string>
     <string name="settings_resolver_local_subtitle">内蔵 yt-dlp エンジン</string>
     <string name="settings_resolver_online_subtitle">オンラインコンバーター</string>
+    <string name="settings_resolvers_info">今のところこれのみ利用可能です。</string>
+    <string name="resolver_online_tag">オンライン</string>
 
     <!-- Settings: downloads -->
     <string name="settings_downloads_section">ダウンロード</string>

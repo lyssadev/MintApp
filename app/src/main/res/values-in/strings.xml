@@ -97,6 +97,8 @@
     <string name="settings_resolver_local">Lokal</string>
     <string name="settings_resolver_local_subtitle">Mesin yt-dlp bawaan</string>
     <string name="settings_resolver_online_subtitle">Konverter online</string>
+    <string name="settings_resolvers_info">Hanya ini yang tersedia untuk saat ini.</string>
+    <string name="resolver_online_tag">Online</string>
 
     <!-- Settings: downloads -->
     <string name="settings_downloads_section">Unduhan</string>

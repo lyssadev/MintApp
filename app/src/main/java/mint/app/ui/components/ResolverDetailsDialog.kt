@@ -32,6 +32,7 @@ import io.github.lyxnx.compose.ui.tablericons.outline.BrandReddit
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandTiktok
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandX
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandYoutube
+import io.github.lyxnx.compose.ui.tablericons.outline.Check
 import io.github.lyxnx.compose.ui.tablericons.outline.Gif
 import io.github.lyxnx.compose.ui.tablericons.outline.Music
 import io.github.lyxnx.compose.ui.tablericons.outline.Photo
@@ -47,6 +48,7 @@ private data class ResolverDetail(
     val nameRes: Int,
     val icon: ImageVector,
     val capabilities: List<ResolverCapability>,
+    val online: Boolean = false,
 )
 
 private val capVideo = ResolverCapability(R.string.capability_video, TablerIcons.Outline.Video)
@@ -59,6 +61,7 @@ private val resolverDetails = listOf(
         R.string.platform_youtube,
         TablerIcons.Outline.BrandYoutube,
         listOf(capVideo, capAudio),
+        online = true,
     ),
     ResolverDetail(
         R.string.platform_instagram,
@@ -149,11 +152,40 @@ private fun ResolverRow(resolver: ResolverDetail) {
             modifier = Modifier.weight(1f),
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
-            Text(
-                text = stringResource(resolver.nameRes),
-                style = MaterialTheme.typography.bodyLarge,
-                color = MaterialTheme.colorScheme.onSurface,
-            )
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(
+                    text = stringResource(resolver.nameRes),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                if (resolver.online) {
+                    Surface(
+                        shape = RoundedCornerShape(8.dp),
+                        color = MaterialTheme.colorScheme.primaryContainer,
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Icon(
+                                imageVector = TablerIcons.Outline.Check,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(12.dp),
+                            )
+                            Text(
+                                text = stringResource(R.string.resolver_online_tag),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                            )
+                        }
+                    }
+                }
+            }
             Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                 resolver.capabilities.forEach { capability ->
                     Surface(

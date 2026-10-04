@@ -108,6 +108,8 @@
     <string name="settings_resolver_local">Local</string>
     <string name="settings_resolver_local_subtitle">Built-in yt-dlp engine</string>
     <string name="settings_resolver_online_subtitle">Online converter</string>
+    <string name="settings_resolvers_info">Only these available for now.</string>
+    <string name="resolver_online_tag">Online</string>
 
     <!-- Settings: downloads -->
     <string name="settings_downloads_section">Downloads</string>
