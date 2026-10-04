@@ -356,10 +356,10 @@ private fun OptionsBody(
                     .fillMaxWidth()
                     .heightIn(max = optionsMaxHeight)
                     .verticalScroll(rememberScrollState()),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 if (info.videoOptions.isNotEmpty()) {
-                    OptionSection(
+                    OptionGroup(
                         title = stringResource(R.string.stream_badge_video),
                         icon = TablerIcons.Outline.Video,
                         options = info.videoOptions,
@@ -368,7 +368,7 @@ private fun OptionsBody(
                     )
                 }
                 if (info.audioOptions.isNotEmpty()) {
-                    OptionSection(
+                    OptionGroup(
                         title = stringResource(R.string.stream_badge_audio),
                         icon = TablerIcons.Outline.Music,
                         options = info.audioOptions,
@@ -388,34 +388,43 @@ private fun OptionsBody(
 }
 
 @Composable
-private fun OptionSection(
+private fun OptionGroup(
     title: String,
     icon: ImageVector,
     options: List<MediaFormat>,
     startingFormatId: String?,
     onOptionClick: (MediaFormat) -> Unit,
 ) {
-    Column(
+    Surface(
         modifier = Modifier.fillMaxWidth(),
-        verticalArrangement = Arrangement.spacedBy(8.dp),
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
     ) {
-        SectionHeader(title = title, icon = icon, count = options.size)
-        options.chunked(OPTION_COLUMNS).forEach { row ->
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
+        Column {
+            GroupHeader(title = title, icon = icon, count = options.size)
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
+            Column(
+                modifier = Modifier.padding(12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
             ) {
-                row.forEach { option ->
-                    OptionTile(
-                        option = option,
-                        isStarting = option.formatId == startingFormatId,
-                        blocked = startingFormatId != null,
-                        onClick = { onOptionClick(option) },
-                        modifier = Modifier.weight(1f),
-                    )
-                }
-                repeat(OPTION_COLUMNS - row.size) {
-                    Spacer(modifier = Modifier.weight(1f))
+                options.chunked(OPTION_COLUMNS).forEach { row ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        row.forEach { option ->
+                            OptionTile(
+                                option = option,
+                                isStarting = option.formatId == startingFormatId,
+                                blocked = startingFormatId != null,
+                                onClick = { onOptionClick(option) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                        repeat(OPTION_COLUMNS - row.size) {
+                            Spacer(modifier = Modifier.weight(1f))
+                        }
+                    }
                 }
             }
         }
@@ -423,28 +432,38 @@ private fun OptionSection(
 }
 
 @Composable
-private fun SectionHeader(title: String, icon: ImageVector, count: Int) {
+private fun GroupHeader(title: String, icon: ImageVector, count: Int) {
     Row(
-        horizontalArrangement = Arrangement.spacedBy(6.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Icon(
             imageVector = icon,
             contentDescription = null,
-            tint = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier.size(14.dp),
+            tint = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.size(16.dp),
         )
         Text(
             text = title,
-            style = MaterialTheme.typography.labelMedium,
+            style = MaterialTheme.typography.labelLarge,
             fontWeight = FontWeight.SemiBold,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.weight(1f),
         )
-        Text(
-            text = "· $count",
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
-        )
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+        ) {
+            Text(
+                text = count.toString(),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp),
+            )
+        }
     }
 }
 
