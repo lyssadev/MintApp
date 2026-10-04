@@ -46,6 +46,11 @@
     <string name="stream_badge_audio">音声</string>
     <string name="stream_no_streams">ダウンロード可能なストリームがありません</string>
 
+    <!-- Share menu -->
+    <string name="share_choose_format">フォーマットを選択</string>
+    <string name="share_resolving">リンクを解析中…</string>
+    <string name="share_unsupported">YouTube のリンクのみ対応しています</string>
+
     <!-- Downloads -->
     <string name="downloads_title">ダウンロード</string>
     <string name="downloads_section_in_progress">進行中</string>

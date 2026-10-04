@@ -46,6 +46,11 @@
     <string name="stream_badge_audio">Audio</string>
     <string name="stream_no_streams">No hay streams disponibles para descargar</string>
 
+    <!-- Share menu -->
+    <string name="share_choose_format">Elige un formato</string>
+    <string name="share_resolving">Resolviendo enlace…</string>
+    <string name="share_unsupported">Solo se admiten enlaces de YouTube</string>
+
     <!-- Downloads -->
     <string name="downloads_title">Descargas</string>
     <string name="downloads_section_in_progress">En curso</string>

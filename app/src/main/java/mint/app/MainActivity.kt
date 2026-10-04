@@ -55,26 +55,9 @@ class MainActivity : ComponentActivity() {
     }
 
     private fun handleIncomingIntent(intent: Intent) {
-        when (intent.action) {
-            Intent.ACTION_SEND -> {
-                val text = intent.getStringExtra(Intent.EXTRA_TEXT) ?: return
-                extractUrl(text)?.let { HomeSession.resolveUrl(it, fallbackError = "") }
-            }
-            Intent.ACTION_VIEW -> {
-                val data = intent.dataString ?: return
-                HomeSession.resolveUrl(data, fallbackError = "")
-            }
-        }
-    }
-
-    private fun extractUrl(text: String): String? {
-        val trimmed = text.trim()
-        return when {
-            trimmed.startsWith("http://") || trimmed.startsWith("https://") -> trimmed
-            else -> {
-                trimmed.split("\\s+".toRegex())
-                    .firstOrNull { it.startsWith("https://") || it.startsWith("http://") }
-            }
+        if (intent.action == Intent.ACTION_VIEW) {
+            val data = intent.dataString ?: return
+            HomeSession.resolveUrl(data, fallbackError = "")
         }
     }
 }

@@ -31,12 +31,14 @@ object ResolverRegistry {
         Logger.d(TAG, "init: ${resolvers.size} resolvers initialized")
     }
 
+    fun isYouTube(url: String): Boolean {
+        val host = runCatching { URI(url).host }.getOrNull()?.lowercase() ?: return false
+        return host == "youtu.be" || host == "youtube-nocookie.com" || host.endsWith("youtube.com")
+    }
+
     fun isSupported(url: String): Boolean {
         val host = runCatching { URI(url).host }.getOrNull()?.lowercase() ?: return false
-        val supported = when {
-            host == "youtu.be" -> true
-            host == "youtube-nocookie.com" -> true
-            host.endsWith("youtube.com") -> true
+        val supported = isYouTube(url) || when {
             host == "instagr.am" -> true
             host.endsWith("instagram.com") -> true
             host.endsWith("tiktok.com") -> true

@@ -46,6 +46,11 @@
     <string name="stream_badge_audio">Audio</string>
     <string name="stream_no_streams">Tidak ada stream yang bisa diunduh</string>
 
+    <!-- Share menu -->
+    <string name="share_choose_format">Pilih format</string>
+    <string name="share_resolving">Menyelesaikan tautan…</string>
+    <string name="share_unsupported">Hanya tautan YouTube yang didukung</string>
+
     <!-- Downloads -->
     <string name="downloads_title">Unduhan</string>
     <string name="downloads_section_in_progress">Sedang berlangsung</string>

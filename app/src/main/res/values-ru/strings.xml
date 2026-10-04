@@ -46,6 +46,11 @@
     <string name="stream_badge_audio">Аудио</string>
     <string name="stream_no_streams">Нет доступных для загрузки потоков</string>
 
+    <!-- Share menu -->
+    <string name="share_choose_format">Выберите формат</string>
+    <string name="share_resolving">Обработка ссылки…</string>
+    <string name="share_unsupported">Поддерживаются только ссылки YouTube</string>
+
     <!-- Downloads -->
     <string name="downloads_title">Загрузки</string>
     <string name="downloads_section_in_progress">Выполняется</string>
