@@ -12,6 +12,7 @@ object DownloadPreferences {
     private const val KEY_IMAGE_DIR = "image_dir"
     private const val KEY_PERMISSIONS_ASKED = "permissions_asked"
     private const val KEY_LOGGER_ENABLED = "logger_enabled"
+    private const val KEY_FAST_STARTUP = "fast_startup"
 
     fun subfolder(context: Context): String =
         prefs(context).getString(KEY_SUBFOLDER, "MintApp") ?: "MintApp"
@@ -53,6 +54,13 @@ object DownloadPreferences {
 
     fun setLoggerEnabled(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_LOGGER_ENABLED, value).apply()
+    }
+
+    fun fastStartup(context: Context): Boolean =
+        prefs(context).getBoolean(KEY_FAST_STARTUP, false)
+
+    fun setFastStartup(context: Context, value: Boolean) {
+        prefs(context).edit().putBoolean(KEY_FAST_STARTUP, value).apply()
     }
 
     private fun prefs(context: Context): SharedPreferences =

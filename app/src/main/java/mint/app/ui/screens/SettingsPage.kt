@@ -74,6 +74,7 @@ import io.github.lyxnx.compose.ui.tablericons.outline.Link
 import io.github.lyxnx.compose.ui.tablericons.outline.Moon
 import io.github.lyxnx.compose.ui.tablericons.outline.Palette
 import io.github.lyxnx.compose.ui.tablericons.outline.Refresh
+import io.github.lyxnx.compose.ui.tablericons.outline.Rocket
 import io.github.lyxnx.compose.ui.tablericons.outline.Star
 import io.github.lyxnx.compose.ui.tablericons.outline.PlugConnectedX
 import io.github.lyxnx.compose.ui.tablericons.outline.X
@@ -121,6 +122,7 @@ fun SettingsPage(modifier: Modifier = Modifier) {
             )
         }
         AppearanceSection(onOpenThemePicker = { showThemePicker = true })
+        StartupSection()
         LanguageSection()
         ConnectionsSection()
         DownloadsSection()
@@ -292,6 +294,60 @@ private fun AppearanceSection(onOpenThemePicker: () -> Unit) {
                         onCheckedChange = { checked -> ThemeController.updateAmoled(checked) },
                     )
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StartupSection() {
+    val context = LocalContext.current
+    var enabled by remember { mutableStateOf(DownloadPreferences.fastStartup(context)) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = stringResource(R.string.settings_startup),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+        ) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = TablerIcons.Outline.Rocket,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_fast_startup),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = stringResource(R.string.settings_fast_startup_subtitle),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                Switch(
+                    checked = enabled,
+                    onCheckedChange = { checked ->
+                        enabled = checked
+                        DownloadPreferences.setFastStartup(context, checked)
+                    },
+                )
             }
         }
     }

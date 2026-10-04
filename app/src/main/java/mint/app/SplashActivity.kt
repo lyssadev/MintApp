@@ -105,6 +105,7 @@ class SplashActivity : ComponentActivity() {
             @Suppress("DEPRECATION")
             overridePendingTransition(android.R.anim.fade_in, android.R.anim.fade_out)
         }
+        val fastStartup = DownloadPreferences.fastStartup(this)
         setContent {
             mint.app.ui.theme.MintTheme {
                 Surface(
@@ -112,15 +113,15 @@ class SplashActivity : ComponentActivity() {
                     color = MaterialTheme.colorScheme.background,
                 ) {
                     var permissionsOk by remember { mutableStateOf(permissionsGranted()) }
-                    if (!permissionsOk) {
-                        PermissionGate(
+                    when {
+                        !permissionsOk -> PermissionGate(
                             onGranted = {
                                 DownloadPreferences.setPermissionsAsked(this, true)
                                 permissionsOk = true
                             },
                         )
-                    } else {
-                        SplashScreen(
+                        fastStartup -> LaunchedEffect(Unit) { navigateToMain() }
+                        else -> SplashScreen(
                             onFinished = { navigateToMain() },
                         )
                     }

@@ -127,6 +127,11 @@
     <string name="settings_debug_logger">Logger</string>
     <string name="settings_debug_logger_subtitle">Tulis log debug ke logcat (awalan tag: Mint.)</string>
 
+    <!-- Settings: startup -->
+    <string name="settings_startup">Peluncuran</string>
+    <string name="settings_fast_startup">Peluncuran cepat</string>
+    <string name="settings_fast_startup_subtitle">Lewati layar splash saat aplikasi dibuka</string>
+
     <!-- Update dialog -->
     <string name="update_checking">Memeriksa pembaruan</string>
     <string name="update_checking_detail">Mencari versi yang lebih baru dari v%1$s</string>

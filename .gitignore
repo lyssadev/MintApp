@@ -29,3 +29,7 @@ local.properties
 *.aab
 *.ap_
 *.dex
+
+# WorkBuddy
+.workbuddy/
+.workbuddy-ai/

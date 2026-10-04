@@ -127,6 +127,11 @@
     <string name="settings_debug_logger">Logger</string>
     <string name="settings_debug_logger_subtitle">Écrit les logs de débogage dans logcat (préfixe de tag : Mint.)</string>
 
+    <!-- Settings: startup -->
+    <string name="settings_startup">Démarrage</string>
+    <string name="settings_fast_startup">Démarrage rapide</string>
+    <string name="settings_fast_startup_subtitle">Ignorer l\'écran de démarrage au lancement</string>
+
     <!-- Update dialog -->
     <string name="update_checking">Recherche de mises à jour</string>
     <string name="update_checking_detail">Recherche d\'une version plus récente que la v%1$s</string>

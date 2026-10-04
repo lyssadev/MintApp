@@ -127,6 +127,11 @@
     <string name="settings_debug_logger">Логгер</string>
     <string name="settings_debug_logger_subtitle">Пишет отладочные логи в logcat (префикс тега: Mint.)</string>
 
+    <!-- Settings: startup -->
+    <string name="settings_startup">Запуск</string>
+    <string name="settings_fast_startup">Быстрый запуск</string>
+    <string name="settings_fast_startup_subtitle">Пропускать экран загрузки при запуске</string>
+
     <!-- Update dialog -->
     <string name="update_checking">Проверка обновлений</string>
     <string name="update_checking_detail">Поиск версии новее v%1$s</string>

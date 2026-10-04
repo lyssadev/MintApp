@@ -127,6 +127,11 @@
     <string name="settings_debug_logger">ロガー</string>
     <string name="settings_debug_logger_subtitle">logcat にデバッグログを出力します（タグの接頭辞: Mint.）</string>
 
+    <!-- Settings: startup -->
+    <string name="settings_startup">起動</string>
+    <string name="settings_fast_startup">高速起動</string>
+    <string name="settings_fast_startup_subtitle">起動時にスプラッシュ画面をスキップ</string>
+
     <!-- Update dialog -->
     <string name="update_checking">アップデートを確認中</string>
     <string name="update_checking_detail">v%1$s より新しいバージョンを探しています</string>

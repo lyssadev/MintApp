@@ -127,6 +127,11 @@
     <string name="settings_debug_logger">Logger</string>
     <string name="settings_debug_logger_subtitle">Grava logs de depuração no logcat (prefixo de tag: Mint.)</string>
 
+    <!-- Settings: startup -->
+    <string name="settings_startup">Inicialização</string>
+    <string name="settings_fast_startup">Inicialização rápida</string>
+    <string name="settings_fast_startup_subtitle">Pular a tela de carregamento ao abrir o app</string>
+
     <!-- Update dialog -->
     <string name="update_checking">Verificando atualizações</string>
     <string name="update_checking_detail">Procurando uma versão mais nova que a v%1$s</string>
