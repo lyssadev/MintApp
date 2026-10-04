@@ -99,6 +99,16 @@
     <string name="settings_connection_login_hint">Login to unlock full access</string>
     <string name="settings_connection_unlinked_toast">%1$s unlinked</string>
 
+    <!-- Settings: resolvers -->
+    <string name="settings_resolvers">Resolvers</string>
+    <string name="settings_resolver_youtube">YouTube</string>
+    <string name="settings_resolver_on_device">On-device</string>
+    <string name="settings_resolver_cloud">Cloud</string>
+    <string name="settings_resolver_cloud_name">cnv.cx</string>
+    <string name="settings_resolver_local">Local</string>
+    <string name="settings_resolver_local_subtitle">Built-in yt-dlp engine</string>
+    <string name="settings_resolver_online_subtitle">Online converter</string>
+
     <!-- Settings: downloads -->
     <string name="settings_downloads_section">Downloads</string>
     <string name="settings_download_folder">Download folder</string>

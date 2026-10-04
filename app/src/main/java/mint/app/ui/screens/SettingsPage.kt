@@ -34,8 +34,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.Button
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -67,6 +65,7 @@ import io.github.lyxnx.compose.ui.tablericons.outline.BrandPinterest
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandTiktok
 import io.github.lyxnx.compose.ui.tablericons.outline.Bug
 import io.github.lyxnx.compose.ui.tablericons.outline.Check
+import io.github.lyxnx.compose.ui.tablericons.outline.ChevronDown
 import io.github.lyxnx.compose.ui.tablericons.outline.ChevronRight
 import io.github.lyxnx.compose.ui.tablericons.outline.Language
 import io.github.lyxnx.compose.ui.tablericons.outline.Folder
@@ -76,6 +75,7 @@ import io.github.lyxnx.compose.ui.tablericons.outline.Palette
 import io.github.lyxnx.compose.ui.tablericons.outline.Refresh
 import io.github.lyxnx.compose.ui.tablericons.outline.Rocket
 import io.github.lyxnx.compose.ui.tablericons.outline.Star
+import io.github.lyxnx.compose.ui.tablericons.outline.World
 import io.github.lyxnx.compose.ui.tablericons.outline.PlugConnectedX
 import io.github.lyxnx.compose.ui.tablericons.outline.X
 import mint.app.BuildConfig
@@ -88,6 +88,7 @@ import mint.app.core.prefs.ConnectionPreferences
 import mint.app.core.prefs.DownloadPreferences
 import mint.app.core.util.Logger
 import mint.app.core.prefs.LanguagePreferences
+import mint.app.core.prefs.YtResolverMode
 import mint.app.core.update.UpdateUiState
 import mint.app.resolution.impl.InstagramResolver
 import mint.app.ui.theme.ThemeController
@@ -125,6 +126,7 @@ fun SettingsPage(modifier: Modifier = Modifier) {
         StartupSection()
         LanguageSection()
         ConnectionsSection()
+        ResolversSection()
         DownloadsSection()
         AboutSection()
         LoggerSection()
@@ -546,6 +548,219 @@ private fun ThemeSwatch(color: Color) {
             .clip(CircleShape)
             .background(color),
     )
+}
+
+@Composable
+private fun ResolversSection() {
+    val context = LocalContext.current
+    var mode by remember { mutableStateOf(DownloadPreferences.ytResolverMode(context)) }
+    var showDialog by remember { mutableStateOf(false) }
+
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(
+            text = stringResource(R.string.settings_resolvers),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onBackground,
+        )
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainer,
+        ) {
+            Row(
+                modifier = Modifier.padding(20.dp),
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Icon(
+                    imageVector = TablerIcons.Outline.World,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp),
+                )
+                Column(
+                    modifier = Modifier.weight(1f),
+                    verticalArrangement = Arrangement.spacedBy(2.dp),
+                ) {
+                    Text(
+                        text = stringResource(R.string.settings_resolver_youtube),
+                        style = MaterialTheme.typography.bodyLarge,
+                        color = MaterialTheme.colorScheme.onSurface,
+                    )
+                    Text(
+                        text = if (mode == YtResolverMode.ONLINE) {
+                            stringResource(R.string.settings_resolver_online_subtitle)
+                        } else {
+                            stringResource(R.string.settings_resolver_local_subtitle)
+                        },
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                ResolverModeButton(mode = mode, onClick = { showDialog = true })
+            }
+        }
+    }
+
+    if (showDialog) {
+        ResolverModeDialog(
+            mode = mode,
+            onSelect = { selected ->
+                mode = selected
+                DownloadPreferences.setYtResolverMode(context, selected)
+                showDialog = false
+            },
+            onDismiss = { showDialog = false },
+        )
+    }
+}
+
+@Composable
+private fun ResolverModeButton(mode: YtResolverMode, onClick: () -> Unit) {
+    Surface(
+        modifier = Modifier.clickable(onClick = onClick),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+    ) {
+        Row(
+            modifier = Modifier.padding(horizontal = 12.dp, vertical = 7.dp),
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(
+                text = if (mode == YtResolverMode.ONLINE) {
+                    stringResource(R.string.settings_resolver_cloud_name)
+                } else {
+                    stringResource(R.string.settings_resolver_local)
+                },
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+            Icon(
+                imageVector = TablerIcons.Outline.ChevronDown,
+                contentDescription = null,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(16.dp),
+            )
+        }
+    }
+}
+
+@Composable
+private fun ResolverModeDialog(
+    mode: YtResolverMode,
+    onSelect: (YtResolverMode) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    Dialog(onDismissRequest = onDismiss) {
+        Surface(
+            modifier = Modifier.fillMaxWidth(),
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        ) {
+            Column(
+                modifier = Modifier.padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = stringResource(R.string.settings_resolvers),
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface,
+                        )
+                        Text(
+                            text = stringResource(R.string.settings_resolver_youtube),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                    IconButton(onClick = onDismiss) {
+                        Icon(
+                            imageVector = TablerIcons.Outline.X,
+                            contentDescription = stringResource(R.string.cd_close),
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
+                }
+                ResolverSectionLabel(text = stringResource(R.string.settings_resolver_on_device))
+                ResolverOptionRow(
+                    label = stringResource(R.string.settings_resolver_local),
+                    description = stringResource(R.string.settings_resolver_local_subtitle),
+                    selected = mode == YtResolverMode.LOCAL,
+                    onClick = { onSelect(YtResolverMode.LOCAL) },
+                )
+                ResolverSectionLabel(text = stringResource(R.string.settings_resolver_cloud))
+                ResolverOptionRow(
+                    label = stringResource(R.string.settings_resolver_cloud_name),
+                    description = stringResource(R.string.settings_resolver_online_subtitle),
+                    selected = mode == YtResolverMode.ONLINE,
+                    onClick = { onSelect(YtResolverMode.ONLINE) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ResolverSectionLabel(text: String) {
+    Text(
+        text = text,
+        style = MaterialTheme.typography.labelSmall,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier.padding(top = 4.dp),
+    )
+}
+
+@Composable
+private fun ResolverOptionRow(
+    label: String,
+    description: String,
+    selected: Boolean,
+    onClick: () -> Unit,
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        border = if (selected) BorderStroke(1.dp, MaterialTheme.colorScheme.primary) else null,
+    ) {
+        Row(
+            modifier = Modifier
+                .clickable(onClick = onClick)
+                .padding(14.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(
+                modifier = Modifier.weight(1f),
+                verticalArrangement = Arrangement.spacedBy(2.dp),
+            ) {
+                Text(
+                    text = label,
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    text = description,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (selected) {
+                Icon(
+                    imageVector = TablerIcons.Outline.Check,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(20.dp),
+                )
+            }
+        }
+    }
 }
 
 @Composable

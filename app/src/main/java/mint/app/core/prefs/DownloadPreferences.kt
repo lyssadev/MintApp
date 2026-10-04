@@ -13,6 +13,7 @@ object DownloadPreferences {
     private const val KEY_PERMISSIONS_ASKED = "permissions_asked"
     private const val KEY_LOGGER_ENABLED = "logger_enabled"
     private const val KEY_FAST_STARTUP = "fast_startup"
+    private const val KEY_YT_RESOLVER = "yt_resolver_mode"
 
     fun subfolder(context: Context): String =
         prefs(context).getString(KEY_SUBFOLDER, "MintApp") ?: "MintApp"
@@ -61,6 +62,16 @@ object DownloadPreferences {
 
     fun setFastStartup(context: Context, value: Boolean) {
         prefs(context).edit().putBoolean(KEY_FAST_STARTUP, value).apply()
+    }
+
+    fun ytResolverMode(context: Context): YtResolverMode {
+        val raw = prefs(context).getString(KEY_YT_RESOLVER, YtResolverMode.LOCAL.name)
+        return runCatching { YtResolverMode.valueOf(raw ?: YtResolverMode.LOCAL.name) }
+            .getOrDefault(YtResolverMode.LOCAL)
+    }
+
+    fun setYtResolverMode(context: Context, value: YtResolverMode) {
+        prefs(context).edit().putString(KEY_YT_RESOLVER, value.name).apply()
     }
 
     private fun prefs(context: Context): SharedPreferences =

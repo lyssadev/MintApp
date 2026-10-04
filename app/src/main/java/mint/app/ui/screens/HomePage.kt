@@ -152,19 +152,30 @@ fun HomePage(
         val info = (HomeSession.state as? ResolveState.Success)?.info
         if (info != null) {
             val title = if (index != null) "${info.title} (${index + 1})" else info.title
-            val directUrl = if (info.platform == "youtube") null else option.url
-            DownloadService.start(
-                context,
-                info.originalUrl,
-                option.formatId,
-                title,
-                option.format,
-                option.estimatedSizeBytes,
-                option.hasAudio,
-                info.thumbnailUrl,
-                directUrl,
-                option.httpHeaders,
-            )
+            HomeSession.scope.launch {
+                val resolved = if (info.directDownload) {
+                    runCatching { ResolverRegistry.resolveDownloadUrl(info, option) }.getOrNull()
+                } else {
+                    null
+                }
+                val directUrl = when {
+                    resolved != null -> resolved
+                    info.platform == "youtube" -> null
+                    else -> option.url
+                }
+                DownloadService.start(
+                    context,
+                    info.originalUrl,
+                    if (info.directDownload) "" else option.formatId,
+                    title,
+                    option.format,
+                    option.estimatedSizeBytes,
+                    option.hasAudio,
+                    info.thumbnailUrl,
+                    directUrl,
+                    option.httpHeaders,
+                )
+            }
         }
     }
 

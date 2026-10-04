@@ -89,6 +89,15 @@
     <string name="settings_connection_login_hint">Войдите, чтобы открыть полный доступ</string>
     <string name="settings_connection_unlinked_toast">%1$s отключён</string>
 
+    <!-- Settings: resolvers -->
+    <string name="settings_resolvers">Резолверы</string>
+    <string name="settings_resolver_youtube">YouTube</string>
+    <string name="settings_resolver_on_device">На устройстве</string>
+    <string name="settings_resolver_cloud">Облако</string>
+    <string name="settings_resolver_local">Локальный</string>
+    <string name="settings_resolver_local_subtitle">Встроенный движок yt-dlp</string>
+    <string name="settings_resolver_online_subtitle">Онлайн-конвертер</string>
+
     <!-- Settings: downloads -->
     <string name="settings_downloads_section">Загрузки</string>
     <string name="settings_download_folder">Папка загрузок</string>

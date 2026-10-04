@@ -9,6 +9,8 @@ import com.yausername.youtubedl_android.YoutubeDLException
 import com.yausername.youtubedl_android.mapper.VideoFormat
 import mint.app.core.model.MediaFormat
 import mint.app.core.model.MediaItem
+import mint.app.core.prefs.DownloadPreferences
+import mint.app.core.prefs.YtResolverMode
 import mint.app.core.util.Logger
 import mint.app.resolution.Resolver
 import java.net.URI
@@ -63,6 +65,11 @@ object YtDlpResolver : Resolver {
     }
 
     override suspend fun resolve(url: String): MediaItem = withContext(Dispatchers.IO) {
+        val context = appContext
+        if (context != null && DownloadPreferences.ytResolverMode(context) == YtResolverMode.ONLINE) {
+            Logger.d(TAG, "resolve: online mode")
+            return@withContext YtOnlineResolver.resolve(url)
+        }
         try {
             Logger.d(TAG, "resolve: url=$url")
             val info = YoutubeDL.getInstance().getInfo(url)

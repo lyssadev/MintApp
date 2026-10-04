@@ -13,6 +13,7 @@ data class MediaItem(
     val audioOptions: List<MediaFormat>,
     val imageOptions: List<MediaFormat> = emptyList(),
     val gifOptions: List<MediaFormat> = emptyList(),
+    val directDownload: Boolean = false,
 )
 
 data class MediaFormat(

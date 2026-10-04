@@ -1,6 +1,7 @@
 package mint.app.resolution
 
 import android.content.Context
+import mint.app.core.model.MediaFormat
 import mint.app.core.model.MediaItem
 import mint.app.core.util.Logger
 import mint.app.resolution.impl.InstagramResolver
@@ -9,6 +10,7 @@ import mint.app.resolution.impl.RedditResolver
 import mint.app.resolution.impl.TikTokResolver
 import mint.app.resolution.impl.XResolver
 import mint.app.resolution.impl.YtDlpResolver
+import mint.app.resolution.impl.YtOnlineResolver
 import java.net.URI
 
 object ResolverRegistry {
@@ -82,5 +84,10 @@ object ResolverRegistry {
         }
         Logger.e(TAG, "resolve: all resolvers failed", lastError)
         throw lastError ?: Exception("No resolver available for this link")
+    }
+
+    suspend fun resolveDownloadUrl(info: MediaItem, option: MediaFormat): String? {
+        if (!info.directDownload) return null
+        return YtOnlineResolver.directUrl(info.originalUrl, option.formatId)
     }
 }

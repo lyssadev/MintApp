@@ -89,6 +89,15 @@
     <string name="settings_connection_login_hint">Anmelden für vollen Zugriff</string>
     <string name="settings_connection_unlinked_toast">%1$s getrennt</string>
 
+    <!-- Settings: resolvers -->
+    <string name="settings_resolvers">Resolver</string>
+    <string name="settings_resolver_youtube">YouTube</string>
+    <string name="settings_resolver_on_device">Auf dem Gerät</string>
+    <string name="settings_resolver_cloud">Cloud</string>
+    <string name="settings_resolver_local">Lokal</string>
+    <string name="settings_resolver_local_subtitle">Integrierte yt-dlp-Engine</string>
+    <string name="settings_resolver_online_subtitle">Online-Konverter</string>
+
     <!-- Settings: downloads -->
     <string name="settings_downloads_section">Downloads</string>
     <string name="settings_download_folder">Download-Ordner</string>

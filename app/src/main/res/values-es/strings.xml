@@ -89,6 +89,15 @@
     <string name="settings_connection_login_hint">Inicia sesión para desbloquear todo</string>
     <string name="settings_connection_unlinked_toast">%1$s desvinculado</string>
 
+    <!-- Settings: resolvers -->
+    <string name="settings_resolvers">Resolutores</string>
+    <string name="settings_resolver_youtube">YouTube</string>
+    <string name="settings_resolver_on_device">En el dispositivo</string>
+    <string name="settings_resolver_cloud">Nube</string>
+    <string name="settings_resolver_local">Local</string>
+    <string name="settings_resolver_local_subtitle">Motor yt-dlp integrado</string>
+    <string name="settings_resolver_online_subtitle">Convertidor en línea</string>
+
     <!-- Settings: downloads -->
     <string name="settings_downloads_section">Descargas</string>
     <string name="settings_download_folder">Carpeta de descargas</string>

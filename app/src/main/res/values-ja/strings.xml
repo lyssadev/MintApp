@@ -89,6 +89,15 @@
     <string name="settings_connection_login_hint">ログインしてすべての機能を利用</string>
     <string name="settings_connection_unlinked_toast">%1$s の連携を解除しました</string>
 
+    <!-- Settings: resolvers -->
+    <string name="settings_resolvers">リゾルバ</string>
+    <string name="settings_resolver_youtube">YouTube</string>
+    <string name="settings_resolver_on_device">デバイス上</string>
+    <string name="settings_resolver_cloud">クラウド</string>
+    <string name="settings_resolver_local">ローカル</string>
+    <string name="settings_resolver_local_subtitle">内蔵 yt-dlp エンジン</string>
+    <string name="settings_resolver_online_subtitle">オンラインコンバーター</string>
+
     <!-- Settings: downloads -->
     <string name="settings_downloads_section">ダウンロード</string>
     <string name="settings_download_folder">ダウンロードフォルダー</string>
