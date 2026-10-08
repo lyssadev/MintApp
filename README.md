@@ -22,10 +22,12 @@ Mint was built for fun as a personal project — got tired of using other downlo
 Currently supported platforms:
 
 - YouTube / YouTube Music
+- SoundCloud (tracks and sets)
 - Instagram (reels, posts, stories)
 - TikTok (videos and photo posts)
 - X / Twitter (videos)
 - Pinterest (videos, images, gifs)
+- Reddit (videos, images, gifs)
 
 More downloaders are coming soon.
 
@@ -33,3 +35,4 @@ More downloaders are coming soon.
 
 - Some platforms (like Instagram and TikTok) may require linking your account from Settings to download private or restricted content.
 - Mint does its best to grab the highest quality available for each platform.
+- SoundCloud Go+ (monetized) tracks only expose a 30-second preview, and DRM-protected tracks cannot be downloaded. Free tracks download in full.
