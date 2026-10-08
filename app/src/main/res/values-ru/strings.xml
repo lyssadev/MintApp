@@ -51,6 +51,19 @@
     <string name="share_resolving">Обработка ссылки…</string>
     <string name="share_unsupported">Поддерживаются только ссылки YouTube</string>
 
+    <!-- Playlist -->
+    <string name="capability_playlist">Плейлисты</string>
+    <string name="playlist_count">%1$d видео</string>
+    <string name="playlist_quality">Качество</string>
+    <string name="playlist_selected_count">Выбрано: %1$d</string>
+    <string name="playlist_select_all">Выбрать все</string>
+    <string name="playlist_clear_all">Снять выделение</string>
+    <string name="playlist_load_more">Загрузить ещё</string>
+    <string name="playlist_download_selected">Скачать %1$d</string>
+    <string name="playlist_empty">В этом плейлисте нет доступных для скачивания видео</string>
+    <string name="settings_playlist_page_size">Размер страницы плейлиста</string>
+    <string name="settings_playlist_page_size_subtitle">Видео, загружаемых за раз</string>
+
     <!-- Downloads -->
     <string name="downloads_title">Загрузки</string>
     <string name="downloads_section_in_progress">Выполняется</string>
