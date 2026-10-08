@@ -30,6 +30,7 @@ import io.github.lyxnx.compose.ui.tablericons.outline.BrandInstagram
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandPinterest
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandReddit
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandSoundcloud
+import io.github.lyxnx.compose.ui.tablericons.outline.BrandSpotify
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandTiktok
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandX
 import io.github.lyxnx.compose.ui.tablericons.outline.BrandYoutube
@@ -69,6 +70,11 @@ private val resolverDetails = listOf(
     ResolverDetail(
         R.string.platform_soundcloud,
         TablerIcons.Outline.BrandSoundcloud,
+        listOf(capAudio, capPlaylist),
+    ),
+    ResolverDetail(
+        R.string.platform_spotify,
+        TablerIcons.Outline.BrandSpotify,
         listOf(capAudio, capPlaylist),
     ),
     ResolverDetail(
