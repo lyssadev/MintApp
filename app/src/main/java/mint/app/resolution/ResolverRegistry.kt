@@ -8,10 +8,12 @@ import mint.app.core.util.Logger
 import mint.app.resolution.impl.InstagramResolver
 import mint.app.resolution.impl.PinterestResolver
 import mint.app.resolution.impl.RedditResolver
+import mint.app.resolution.impl.SpotifyResolver
 import mint.app.resolution.impl.TikTokResolver
 import mint.app.resolution.impl.XResolver
 import mint.app.resolution.impl.YtDlpResolver
 import mint.app.resolution.impl.YtOnlineResolver
+import mint.app.resolution.spotify.SpotifyMetadata
 import java.net.URI
 
 object ResolverRegistry {
@@ -25,6 +27,7 @@ object ResolverRegistry {
         XResolver,
         RedditResolver,
         YtDlpResolver,
+        SpotifyResolver,
     )
 
     fun init(context: Context) {
@@ -37,14 +40,22 @@ object ResolverRegistry {
         return host == "youtu.be" || host == "youtube-nocookie.com" || host.endsWith("youtube.com")
     }
 
-    fun isPlaylist(url: String): Boolean = YtDlpResolver.isPlaylistUrl(url)
+    fun isPlaylist(url: String): Boolean =
+        YtDlpResolver.isPlaylistUrl(url) || SpotifyMetadata.isCollection(url)
 
     suspend fun resolvePlaylist(url: String, offset: Int, limit: Int): PlaylistResult {
         Logger.d(TAG, "resolvePlaylist: url=$url offset=$offset limit=$limit")
+        if (SpotifyMetadata.isCollection(url)) {
+            return SpotifyResolver.resolveCollection(url, offset, limit)
+        }
         return YtDlpResolver.resolvePlaylist(url, offset, limit)
     }
 
     fun isSupported(url: String): Boolean {
+        if (SpotifyMetadata.isSpotify(url)) {
+            Logger.d(TAG, "isSupported: url=$url spotify=true")
+            return true
+        }
         val host = runCatching { URI(url).host }.getOrNull()?.lowercase() ?: return false
         val supported = isYouTube(url) || when {
             host.endsWith("soundcloud.com") -> true
@@ -72,7 +83,7 @@ object ResolverRegistry {
     suspend fun resolve(url: String): MediaItem {
         if (!isSupported(url)) {
             Logger.w(TAG, "resolve: unsupported link $url")
-            throw Exception("Unsupported link. Only YouTube, YouTube Music, SoundCloud, Instagram, TikTok, X, Pinterest and Reddit are supported.")
+            throw Exception("Unsupported link. Only YouTube, YouTube Music, SoundCloud, Spotify, Instagram, TikTok, X, Pinterest and Reddit are supported.")
         }
         var lastError: Exception? = null
         for (resolver in resolvers) {
