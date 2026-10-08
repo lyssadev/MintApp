@@ -72,12 +72,16 @@ object YtDlpResolver : Resolver {
         }
     }
 
-    override suspend fun resolve(url: String): MediaItem = withContext(Dispatchers.IO) {
+    override suspend fun resolve(url: String): MediaItem {
         val context = appContext
         if (context != null && DownloadPreferences.ytResolverMode(context) == YtResolverMode.ONLINE) {
             Logger.d(TAG, "resolve: online mode")
-            return@withContext YtOnlineResolver.resolve(url)
+            return YtOnlineResolver.resolve(url)
         }
+        return resolveLocal(url)
+    }
+
+    suspend fun resolveLocal(url: String): MediaItem = withContext(Dispatchers.IO) {
         try {
             Logger.d(TAG, "resolve: url=$url")
             val info = YoutubeDL.getInstance().getInfo(url)
