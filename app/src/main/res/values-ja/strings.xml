@@ -51,6 +51,19 @@
     <string name="share_resolving">リンクを解析中…</string>
     <string name="share_unsupported">YouTube のリンクのみ対応しています</string>
 
+    <!-- Playlist -->
+    <string name="capability_playlist">プレイリスト</string>
+    <string name="playlist_count">%1$d 本の動画</string>
+    <string name="playlist_quality">画質</string>
+    <string name="playlist_selected_count">%1$d 件選択中</string>
+    <string name="playlist_select_all">すべて選択</string>
+    <string name="playlist_clear_all">選択を解除</string>
+    <string name="playlist_load_more">もっと読み込む</string>
+    <string name="playlist_download_selected">%1$d 件をダウンロード</string>
+    <string name="playlist_empty">このプレイリストにはダウンロードできる動画がありません</string>
+    <string name="settings_playlist_page_size">プレイリストのページサイズ</string>
+    <string name="settings_playlist_page_size_subtitle">一度に読み込む動画数</string>
+
     <!-- Downloads -->
     <string name="downloads_title">ダウンロード</string>
     <string name="downloads_section_in_progress">進行中</string>
