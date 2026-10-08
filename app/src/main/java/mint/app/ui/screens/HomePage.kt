@@ -225,7 +225,7 @@ fun HomePage(
                         }
                         val directUrl = when {
                             resolved != null -> resolved
-                            info.platform == "youtube" -> null
+                            info.platform == "youtube" || info.platform == "soundcloud" -> null
                             else -> option.url
                         }
                         DownloadService.start(
@@ -573,6 +573,10 @@ private fun ResolveResult(
             state is ResolveState.Success -> {
                 val info = state.info
                 val allItems = info.imageOptions + info.gifOptions + info.videoOptions
+                val audioOnly = info.videoOptions.isEmpty() &&
+                    info.imageOptions.isEmpty() &&
+                    info.gifOptions.isEmpty() &&
+                    info.audioOptions.isNotEmpty()
                 when {
                     info.platform != "youtube" && (info.imageOptions.isNotEmpty() || info.gifOptions.isNotEmpty() || allItems.size > 1) -> MediaOptionsSection(
                         info = info,
@@ -583,7 +587,7 @@ private fun ResolveResult(
                             }
                         },
                     )
-                    info.platform == "youtube" -> StreamInfoCard(
+                    info.platform == "youtube" || audioOnly -> StreamInfoCard(
                         info = info,
                         downloading = false,
                         startingOptionId = HomeSession.startingFormatId,
