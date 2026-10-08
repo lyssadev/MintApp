@@ -14,6 +14,10 @@ object DownloadPreferences {
     private const val KEY_LOGGER_ENABLED = "logger_enabled"
     private const val KEY_FAST_STARTUP = "fast_startup"
     private const val KEY_YT_RESOLVER = "yt_resolver_mode"
+    private const val KEY_PLAYLIST_PAGE_SIZE = "playlist_page_size"
+    private const val PLAYLIST_PAGE_SIZE_DEFAULT = 100
+    private const val PLAYLIST_PAGE_SIZE_MIN = 10
+    private const val PLAYLIST_PAGE_SIZE_MAX = 500
 
     fun subfolder(context: Context): String =
         prefs(context).getString(KEY_SUBFOLDER, "MintApp") ?: "MintApp"
@@ -72,6 +76,18 @@ object DownloadPreferences {
 
     fun setYtResolverMode(context: Context, value: YtResolverMode) {
         prefs(context).edit().putString(KEY_YT_RESOLVER, value.name).apply()
+    }
+
+    fun playlistPageSize(context: Context): Int =
+        prefs(context)
+            .getInt(KEY_PLAYLIST_PAGE_SIZE, PLAYLIST_PAGE_SIZE_DEFAULT)
+            .coerceIn(PLAYLIST_PAGE_SIZE_MIN, PLAYLIST_PAGE_SIZE_MAX)
+
+    fun setPlaylistPageSize(context: Context, value: Int) {
+        prefs(context)
+            .edit()
+            .putInt(KEY_PLAYLIST_PAGE_SIZE, value.coerceIn(PLAYLIST_PAGE_SIZE_MIN, PLAYLIST_PAGE_SIZE_MAX))
+            .apply()
     }
 
     private fun prefs(context: Context): SharedPreferences =
