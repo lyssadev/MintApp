@@ -109,10 +109,6 @@ fun ShareMenu(
     }
 
     LaunchedEffect(link) {
-        if (!ResolverRegistry.isYouTube(link)) {
-            state = ShareMenuState.Error(context.getString(R.string.share_unsupported))
-            return@LaunchedEffect
-        }
         state = try {
             EngineSetup.await()
             if (ResolverRegistry.isPlaylist(link)) {
