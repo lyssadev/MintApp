@@ -37,7 +37,7 @@ object ResolverRegistry {
         return host == "youtu.be" || host == "youtube-nocookie.com" || host.endsWith("youtube.com")
     }
 
-    fun isPlaylist(url: String): Boolean = isYouTube(url) && YtDlpResolver.isPlaylistUrl(url)
+    fun isPlaylist(url: String): Boolean = YtDlpResolver.isPlaylistUrl(url)
 
     suspend fun resolvePlaylist(url: String, offset: Int, limit: Int): PlaylistResult {
         Logger.d(TAG, "resolvePlaylist: url=$url offset=$offset limit=$limit")
@@ -47,6 +47,7 @@ object ResolverRegistry {
     fun isSupported(url: String): Boolean {
         val host = runCatching { URI(url).host }.getOrNull()?.lowercase() ?: return false
         val supported = isYouTube(url) || when {
+            host.endsWith("soundcloud.com") -> true
             host == "instagr.am" -> true
             host.endsWith("instagram.com") -> true
             host.endsWith("tiktok.com") -> true
@@ -71,7 +72,7 @@ object ResolverRegistry {
     suspend fun resolve(url: String): MediaItem {
         if (!isSupported(url)) {
             Logger.w(TAG, "resolve: unsupported link $url")
-            throw Exception("Unsupported link. Only YouTube, YouTube Music, Instagram, TikTok, X, Pinterest and Reddit are supported.")
+            throw Exception("Unsupported link. Only YouTube, YouTube Music, SoundCloud, Instagram, TikTok, X, Pinterest and Reddit are supported.")
         }
         var lastError: Exception? = null
         for (resolver in resolvers) {
