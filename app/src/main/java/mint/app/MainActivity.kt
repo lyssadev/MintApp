@@ -26,6 +26,7 @@ class MainActivity : ComponentActivity() {
         AppUpdater.cleanup(this)
         ThemeController.init(this)
         EngineSetup.start(this)
+        HomeSession.init(this)
         applyThemeAwareEdgeToEdge()
         setContent {
             LaunchedEffect(
