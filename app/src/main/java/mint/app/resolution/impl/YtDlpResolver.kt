@@ -6,13 +6,18 @@ import kotlinx.coroutines.withContext
 import com.yausername.ffmpeg.FFmpeg
 import com.yausername.youtubedl_android.YoutubeDL
 import com.yausername.youtubedl_android.YoutubeDLException
+import com.yausername.youtubedl_android.YoutubeDLRequest
 import com.yausername.youtubedl_android.mapper.VideoFormat
 import mint.app.core.model.MediaFormat
 import mint.app.core.model.MediaItem
+import mint.app.core.model.PlaylistEntry
+import mint.app.core.model.PlaylistResult
 import mint.app.core.prefs.DownloadPreferences
 import mint.app.core.prefs.YtResolverMode
 import mint.app.core.util.Logger
 import mint.app.resolution.Resolver
+import org.json.JSONArray
+import org.json.JSONObject
 import java.net.URI
 
 object YtDlpResolver : Resolver {
@@ -243,6 +248,105 @@ object YtDlpResolver : Resolver {
 
     private fun formatDuration(seconds: Long): String {
         if (seconds <= 0) return "Live"
+        val h = seconds / 3600
+        val m = (seconds % 3600) / 60
+        val s = seconds % 60
+        return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
+    }
+
+    fun isPlaylistUrl(url: String): Boolean {
+        val uri = runCatching { URI(url) }.getOrNull() ?: return false
+        val host = uri.host?.lowercase() ?: return false
+        val isYouTubeHost = host == "youtu.be" || host == "youtube-nocookie.com" || host.endsWith("youtube.com")
+        if (!isYouTubeHost) return false
+        val path = uri.path?.trim('/') ?: ""
+        val params = (uri.query ?: "")
+            .split("&")
+            .map { it.substringBefore('=') }
+            .filter { it.isNotBlank() }
+        val hasList = params.contains("list")
+        val hasVideoId = when {
+            host == "youtu.be" -> path.isNotBlank()
+            params.contains("v") -> true
+            path.startsWith("shorts/") -> true
+            path.startsWith("embed/") -> true
+            path.startsWith("live/") -> true
+            path.startsWith("v/") -> true
+            else -> false
+        }
+        return path.startsWith("playlist") || (hasList && !hasVideoId)
+    }
+
+    suspend fun resolvePlaylist(url: String, offset: Int, limit: Int): PlaylistResult = withContext(Dispatchers.IO) {
+        if (!isPlaylistUrl(url)) throw Exception("Not a YouTube playlist link")
+        Logger.d(TAG, "resolvePlaylist: url=$url offset=$offset limit=$limit")
+        val request = YoutubeDLRequest(url)
+        request.addOption("--flat-playlist")
+        request.addOption("--dump-single-json")
+        request.addOption("--playlist-start", offset + 1)
+        request.addOption("--playlist-end", offset + limit)
+        request.addOption("--no-warnings")
+        val response = try {
+            YoutubeDL.getInstance().execute(request, null, null)
+        } catch (e: YoutubeDLException) {
+            Logger.w(TAG, "resolvePlaylist: yt-dlp error: ${e.message}", e)
+            throw Exception("Could not read this playlist. It may be private, empty or unavailable.", e)
+        } catch (e: InterruptedException) {
+            throw Exception("Request cancelled", e)
+        }
+        val json = runCatching { JSONObject(response.out) }.getOrNull()
+            ?: throw Exception("Could not read this playlist. It may be private, empty or unavailable.")
+        val array = json.optJSONArray("entries") ?: JSONArray()
+        val entries = (0 until array.length()).mapNotNull { index ->
+            val obj = array.optJSONObject(index) ?: return@mapNotNull null
+            val id = obj.optString("id").takeIf { it.isNotBlank() } ?: return@mapNotNull null
+            val rawUrl = obj.optString("url").takeIf { it.isNotBlank() }
+                ?: "https://www.youtube.com/watch?v=$id"
+            PlaylistEntry(
+                id = id,
+                title = obj.optString("title").takeIf { it.isNotBlank() } ?: id,
+                url = sanitizeVideoUrl(rawUrl, id),
+                durationText = entryDuration(obj.optLong("duration", 0L)),
+                thumbnailUrl = bestThumbnail(obj),
+                uploader = obj.optString("uploader").takeIf { it.isNotBlank() }
+                    ?: obj.optString("channel").takeIf { it.isNotBlank() }
+                    ?: "",
+            )
+        }
+        val reported = json.optInt("playlist_count", -1)
+        val total = if (reported > 0) reported else entries.size
+        Logger.d(TAG, "resolvePlaylist: done entries=${entries.size} total=$total")
+        PlaylistResult(
+            originalUrl = url,
+            title = json.optString("title").takeIf { it.isNotBlank() }
+                ?: json.optString("id").takeIf { it.isNotBlank() }
+                ?: "Playlist",
+            uploader = json.optString("uploader").takeIf { it.isNotBlank() }
+                ?: json.optString("channel").takeIf { it.isNotBlank() }
+                ?: "",
+            entries = entries,
+            totalCount = total,
+            hasMore = entries.size >= limit && (reported <= 0 || offset + entries.size < reported),
+        )
+    }
+
+    private fun sanitizeVideoUrl(raw: String, id: String): String {
+        val host = runCatching { URI(raw).host?.lowercase() }.getOrNull()
+        val isYouTube = host == "youtu.be" || host == "youtube-nocookie.com" || host?.endsWith("youtube.com") == true
+        if (!isYouTube) return raw
+        return "https://www.youtube.com/watch?v=$id"
+    }
+
+    private fun bestThumbnail(obj: JSONObject): String? {
+        obj.optString("thumbnail").takeIf { it.isNotBlank() }?.let { return it }
+        val array = obj.optJSONArray("thumbnails") ?: return null
+        return (0 until array.length())
+            .mapNotNull { array.optJSONObject(it)?.optString("url")?.takeIf { u -> u.isNotBlank() } }
+            .lastOrNull()
+    }
+
+    private fun entryDuration(seconds: Long): String {
+        if (seconds <= 0) return ""
         val h = seconds / 3600
         val m = (seconds % 3600) / 60
         val s = seconds % 60
