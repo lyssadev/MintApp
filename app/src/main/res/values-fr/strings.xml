@@ -51,6 +51,19 @@
     <string name="share_resolving">Résolution du lien…</string>
     <string name="share_unsupported">Seuls les liens YouTube sont pris en charge</string>
 
+    <!-- Playlist -->
+    <string name="capability_playlist">Listes de lecture</string>
+    <string name="playlist_count">%1$d vidéos</string>
+    <string name="playlist_quality">Qualité</string>
+    <string name="playlist_selected_count">%1$d sélectionnées</string>
+    <string name="playlist_select_all">Tout sélectionner</string>
+    <string name="playlist_clear_all">Effacer la sélection</string>
+    <string name="playlist_load_more">Charger plus</string>
+    <string name="playlist_download_selected">Télécharger %1$d</string>
+    <string name="playlist_empty">Cette liste de lecture ne contient aucune vidéo téléchargeable</string>
+    <string name="settings_playlist_page_size">Taille de page des listes</string>
+    <string name="settings_playlist_page_size_subtitle">Vidéos chargées à la fois</string>
+
     <!-- Downloads -->
     <string name="downloads_title">Téléchargements</string>
     <string name="downloads_section_in_progress">En cours</string>
