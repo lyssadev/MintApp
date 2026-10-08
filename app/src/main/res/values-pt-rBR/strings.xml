@@ -51,6 +51,19 @@
     <string name="share_resolving">Resolvendo link…</string>
     <string name="share_unsupported">Apenas links do YouTube são compatíveis</string>
 
+    <!-- Playlist -->
+    <string name="capability_playlist">Playlists</string>
+    <string name="playlist_count">%1$d vídeos</string>
+    <string name="playlist_quality">Qualidade</string>
+    <string name="playlist_selected_count">%1$d selecionados</string>
+    <string name="playlist_select_all">Selecionar tudo</string>
+    <string name="playlist_clear_all">Limpar seleção</string>
+    <string name="playlist_load_more">Carregar mais</string>
+    <string name="playlist_download_selected">Baixar %1$d</string>
+    <string name="playlist_empty">Esta playlist não tem vídeos para baixar</string>
+    <string name="settings_playlist_page_size">Tamanho da página da playlist</string>
+    <string name="settings_playlist_page_size_subtitle">Vídeos carregados por vez</string>
+
     <!-- Downloads -->
     <string name="downloads_title">Downloads</string>
     <string name="downloads_section_in_progress">Em andamento</string>
