@@ -225,7 +225,7 @@ fun HomePage(
                         }
                         val directUrl = when {
                             resolved != null -> resolved
-                            info.platform == "youtube" || info.platform == "soundcloud" -> null
+                            info.platform == "youtube" || info.platform == "soundcloud" || info.platform == "spotify" -> null
                             else -> option.url
                         }
                         DownloadService.start(
