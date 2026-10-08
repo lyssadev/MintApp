@@ -3,6 +3,7 @@ package mint.app.resolution
 import android.content.Context
 import mint.app.core.model.MediaFormat
 import mint.app.core.model.MediaItem
+import mint.app.core.model.PlaylistResult
 import mint.app.core.util.Logger
 import mint.app.resolution.impl.InstagramResolver
 import mint.app.resolution.impl.PinterestResolver
@@ -34,6 +35,13 @@ object ResolverRegistry {
     fun isYouTube(url: String): Boolean {
         val host = runCatching { URI(url).host }.getOrNull()?.lowercase() ?: return false
         return host == "youtu.be" || host == "youtube-nocookie.com" || host.endsWith("youtube.com")
+    }
+
+    fun isPlaylist(url: String): Boolean = isYouTube(url) && YtDlpResolver.isPlaylistUrl(url)
+
+    suspend fun resolvePlaylist(url: String, offset: Int, limit: Int): PlaylistResult {
+        Logger.d(TAG, "resolvePlaylist: url=$url offset=$offset limit=$limit")
+        return YtDlpResolver.resolvePlaylist(url, offset, limit)
     }
 
     fun isSupported(url: String): Boolean {
