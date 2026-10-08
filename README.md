@@ -23,6 +23,7 @@ Currently supported platforms:
 
 - YouTube / YouTube Music
 - SoundCloud (tracks and sets)
+- Spotify (tracks, albums and playlists)
 - Instagram (reels, posts, stories)
 - TikTok (videos and photo posts)
 - X / Twitter (videos)
@@ -36,3 +37,4 @@ More downloaders are coming soon.
 - Some platforms (like Instagram and TikTok) may require linking your account from Settings to download private or restricted content.
 - Mint does its best to grab the highest quality available for each platform.
 - SoundCloud Go+ (monetized) tracks only expose a 30-second preview, and DRM-protected tracks cannot be downloaded. Free tracks download in full.
+- Spotify links are matched to the closest song on YouTube Music, so the audio is sourced from YouTube rather than Spotify.
