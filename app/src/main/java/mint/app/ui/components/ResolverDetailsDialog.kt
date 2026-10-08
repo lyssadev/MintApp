@@ -36,6 +36,7 @@ import io.github.lyxnx.compose.ui.tablericons.outline.Check
 import io.github.lyxnx.compose.ui.tablericons.outline.Gif
 import io.github.lyxnx.compose.ui.tablericons.outline.Music
 import io.github.lyxnx.compose.ui.tablericons.outline.Photo
+import io.github.lyxnx.compose.ui.tablericons.outline.Playlist
 import io.github.lyxnx.compose.ui.tablericons.outline.Video
 import mint.app.R
 
@@ -55,12 +56,13 @@ private val capVideo = ResolverCapability(R.string.capability_video, TablerIcons
 private val capAudio = ResolverCapability(R.string.capability_audio, TablerIcons.Outline.Music)
 private val capImage = ResolverCapability(R.string.capability_image, TablerIcons.Outline.Photo)
 private val capGif = ResolverCapability(R.string.capability_gif, TablerIcons.Outline.Gif)
+private val capPlaylist = ResolverCapability(R.string.capability_playlist, TablerIcons.Outline.Playlist)
 
 private val resolverDetails = listOf(
     ResolverDetail(
         R.string.platform_youtube,
         TablerIcons.Outline.BrandYoutube,
-        listOf(capVideo, capAudio),
+        listOf(capVideo, capAudio, capPlaylist),
         online = true,
     ),
     ResolverDetail(
