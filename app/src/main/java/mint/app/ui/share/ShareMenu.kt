@@ -68,10 +68,14 @@ import kotlinx.coroutines.launch
 import mint.app.R
 import mint.app.core.model.MediaFormat
 import mint.app.core.model.MediaItem
+import mint.app.core.model.PlaylistResult
+import mint.app.core.prefs.DownloadPreferences
 import mint.app.resolution.EngineSetup
+import mint.app.resolution.PlaylistQuality
 import mint.app.resolution.ResolverRegistry
 import mint.app.service.DownloadService
 import mint.app.ui.components.IndeterminateProgressBar
+import mint.app.ui.components.PlaylistSection
 import mint.app.ui.components.formatBytes
 
 private const val OPTION_COLUMNS = 2
@@ -80,6 +84,7 @@ private const val SHEET_SHAPE_DP = 28
 private sealed interface ShareMenuState {
     data object Loading : ShareMenuState
     data class Success(val info: MediaItem) : ShareMenuState
+    data class Playlist(val result: PlaylistResult) : ShareMenuState
     data class Error(val message: String) : ShareMenuState
 }
 
@@ -92,6 +97,9 @@ fun ShareMenu(
     val scope = rememberCoroutineScope()
     var state by remember(link) { mutableStateOf<ShareMenuState>(ShareMenuState.Loading) }
     var startingFormatId by remember(link) { mutableStateOf<String?>(null) }
+    var playlistSelected by remember(link) { mutableStateOf<Set<String>>(emptySet()) }
+    var playlistQuality by remember(link) { mutableStateOf(PlaylistQuality.options.first()) }
+    var playlistLoadingMore by remember(link) { mutableStateOf(false) }
 
     val sheetState = remember { MutableTransitionState(false).apply { targetState = true } }
     val close: () -> Unit = { sheetState.targetState = false }
@@ -107,7 +115,12 @@ fun ShareMenu(
         }
         state = try {
             EngineSetup.await()
-            ShareMenuState.Success(ResolverRegistry.resolve(link))
+            if (ResolverRegistry.isPlaylist(link)) {
+                val size = DownloadPreferences.playlistPageSize(context)
+                ShareMenuState.Playlist(ResolverRegistry.resolvePlaylist(link, 0, size))
+            } else {
+                ShareMenuState.Success(ResolverRegistry.resolve(link))
+            }
         } catch (e: Exception) {
             ShareMenuState.Error(e.message ?: context.getString(R.string.home_error_resolve))
         }
@@ -147,6 +160,53 @@ fun ShareMenu(
                     close()
                 } finally {
                     if (trackStart) startingFormatId = null
+                }
+            }
+        }
+    }
+
+    val downloadPlaylist: () -> Unit = {
+        val result = (state as? ShareMenuState.Playlist)?.result
+        if (result != null) {
+            val quality = playlistQuality
+            result.entries.filter { it.id in playlistSelected }.forEach { entry ->
+                DownloadService.start(
+                    context,
+                    entry.url,
+                    quality.selector,
+                    entry.title,
+                    quality.format,
+                    0L,
+                    quality.hasAudio,
+                    entry.thumbnailUrl,
+                    null,
+                    emptyMap(),
+                )
+            }
+            close()
+        }
+    }
+
+    val loadMorePlaylist: () -> Unit = {
+        val result = (state as? ShareMenuState.Playlist)?.result
+        if (result != null && !playlistLoadingMore && result.hasMore) {
+            playlistLoadingMore = true
+            scope.launch {
+                try {
+                    val size = DownloadPreferences.playlistPageSize(context)
+                    val more = ResolverRegistry.resolvePlaylist(result.originalUrl, result.entries.size, size)
+                    val existing = result.entries.map { it.id }.toSet()
+                    val merged = result.entries + more.entries.filterNot { it.id in existing }
+                    state = ShareMenuState.Playlist(
+                        result.copy(
+                            entries = merged,
+                            totalCount = if (more.totalCount > 0) more.totalCount else merged.size,
+                            hasMore = more.hasMore && more.entries.isNotEmpty(),
+                        ),
+                    )
+                } catch (_: Exception) {
+                } finally {
+                    playlistLoadingMore = false
                 }
             }
         }
@@ -217,6 +277,31 @@ fun ShareMenu(
                         when (current) {
                             is ShareMenuState.Loading -> LoadingBody()
                             is ShareMenuState.Error -> ErrorBody(current.message)
+                            is ShareMenuState.Playlist -> PlaylistSection(
+                                result = current.result,
+                                selected = playlistSelected,
+                                quality = playlistQuality,
+                                loadingMore = playlistLoadingMore,
+                                maxListHeight = optionsMaxHeight,
+                                onToggle = { id ->
+                                    playlistSelected = if (id in playlistSelected) {
+                                        playlistSelected - id
+                                    } else {
+                                        playlistSelected + id
+                                    }
+                                },
+                                onToggleAll = {
+                                    val ids = current.result.entries.map { it.id }.toSet()
+                                    playlistSelected = if (ids.isNotEmpty() && playlistSelected.containsAll(ids)) {
+                                        emptySet()
+                                    } else {
+                                        ids
+                                    }
+                                },
+                                onQualityChange = { playlistQuality = it },
+                                onLoadMore = loadMorePlaylist,
+                                onDownload = downloadPlaylist,
+                            )
                             is ShareMenuState.Success -> OptionsBody(
                                 info = current.info,
                                 startingFormatId = startingFormatId,
