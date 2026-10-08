@@ -2,6 +2,7 @@ package mint.app.share
 
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,10 +10,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import mint.app.BuildConfig
+import mint.app.MainActivity
 import mint.app.core.prefs.AppLocale
 import mint.app.core.prefs.DownloadPreferences
 import mint.app.core.util.Logger
 import mint.app.resolution.EngineSetup
+import mint.app.resolution.ResolverRegistry
 import mint.app.ui.share.ShareMenu
 import mint.app.ui.theme.MintTheme
 import mint.app.ui.theme.ThemeController
@@ -38,6 +41,10 @@ class ShareMenuActivity : ComponentActivity() {
             finish()
             return
         }
+        if (!ResolverRegistry.isYouTube(incoming)) {
+            openInApp(incoming)
+            return
+        }
         link = incoming
 
         setContent {
@@ -60,7 +67,22 @@ class ShareMenuActivity : ComponentActivity() {
             finish()
             return
         }
+        if (!ResolverRegistry.isYouTube(incoming)) {
+            openInApp(incoming)
+            return
+        }
         link = incoming
+    }
+
+    private fun openInApp(link: String) {
+        Logger.d(TAG, "openInApp: routing non-youtube link to main app")
+        val target = Intent(this, MainActivity::class.java).apply {
+            action = Intent.ACTION_VIEW
+            data = Uri.parse(link)
+            addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+        }
+        startActivity(target)
+        finish()
     }
 
     private fun extractLink(intent: Intent?): String? {
@@ -76,5 +98,9 @@ class ShareMenuActivity : ComponentActivity() {
             else -> trimmed.split("\\s+".toRegex())
                 .firstOrNull { it.startsWith("https://") || it.startsWith("http://") }
         }
+    }
+
+    companion object {
+        private const val TAG = "ShareMenuActivity"
     }
 }
