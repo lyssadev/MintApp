@@ -34,6 +34,7 @@
 
     <!-- Platforms -->
     <string name="platform_youtube">YouTube</string>
+    <string name="platform_soundcloud">SoundCloud</string>
     <string name="platform_x">X</string>
     <string name="platform_reddit">Reddit</string>
 
