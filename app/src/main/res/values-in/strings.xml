@@ -98,6 +98,13 @@
     <string name="settings_amoled">AMOLED</string>
     <string name="settings_amoled_description">Latar hitam pekat di mode gelap</string>
 
+    <!-- Platforms -->
+    <string name="platform_youtube">YouTube</string>
+    <string name="platform_soundcloud">SoundCloud</string>
+    <string name="platform_spotify">Spotify</string>
+    <string name="platform_x">X</string>
+    <string name="platform_reddit">Reddit</string>
+
     <!-- Settings: connections -->
     <string name="platform_instagram">Instagram</string>
     <string name="platform_tiktok">TikTok</string>
@@ -112,6 +119,7 @@
     <string name="settings_resolver_youtube">YouTube</string>
     <string name="settings_resolver_on_device">Di perangkat</string>
     <string name="settings_resolver_cloud">Cloud</string>
+    <string name="settings_resolver_cloud_name">cnv.cx</string>
     <string name="settings_resolver_local">Lokal</string>
     <string name="settings_resolver_local_subtitle">Mesin yt-dlp bawaan</string>
     <string name="settings_resolver_online_subtitle">Konverter online</string>
