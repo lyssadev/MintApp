@@ -24,6 +24,8 @@ object YtDlpResolver : Resolver {
 
     private const val TAG = "YtDlpResolver"
 
+    private val SOUNDCLOUD_LISTING_SEGMENTS = setOf("sets", "tracks", "likes", "reposts", "albums", "spotlight")
+
     private var initialized = false
     private var appContext: Context? = null
 
@@ -65,6 +67,7 @@ object YtDlpResolver : Resolver {
             host == "youtu.be" -> true
             host == "youtube-nocookie.com" -> true
             host.endsWith("youtube.com") -> true
+            host.endsWith("soundcloud.com") -> true
             else -> false
         }
     }
@@ -174,6 +177,7 @@ object YtDlpResolver : Resolver {
 
             val platform = when {
                 url.contains("youtube.com") || url.contains("youtu.be") || url.contains("youtube-nocookie.com") -> "youtube"
+                url.contains("soundcloud.com") -> "soundcloud"
                 url.contains("instagram.com") -> "instagram"
                 url.contains("tiktok.com") -> "tiktok"
                 else -> "other"
@@ -220,7 +224,7 @@ object YtDlpResolver : Resolver {
             format.fileSize > 0 -> return format.fileSize
             format.fileSizeApproximate > 0 -> return format.fileSizeApproximate
         }
-        val tbr = format.tbr
+        val tbr = if (format.tbr > 0) format.tbr else format.abr
         if (tbr > 0 && durationSeconds > 0) {
             return tbr.toLong() * 1000L / 8L * durationSeconds
         }
@@ -235,7 +239,7 @@ object YtDlpResolver : Resolver {
 
     private fun buildAudioLabel(format: VideoFormat): String {
         val ext = format.ext ?: "m4a"
-        val bitrate = format.tbr
+        val bitrate = if (format.tbr > 0) format.tbr else format.abr
         val rate = if (bitrate > 0) "${bitrate}kbps" else "audio"
         return "$rate · $ext"
     }
@@ -257,6 +261,10 @@ object YtDlpResolver : Resolver {
     fun isPlaylistUrl(url: String): Boolean {
         val uri = runCatching { URI(url) }.getOrNull() ?: return false
         val host = uri.host?.lowercase() ?: return false
+        if (host.endsWith("soundcloud.com")) {
+            val segments = uri.path?.trim('/')?.split("/")?.filter { it.isNotBlank() }.orEmpty()
+            return segments.size >= 2 && segments[1] in SOUNDCLOUD_LISTING_SEGMENTS
+        }
         val isYouTubeHost = host == "youtu.be" || host == "youtube-nocookie.com" || host.endsWith("youtube.com")
         if (!isYouTubeHost) return false
         val path = uri.path?.trim('/') ?: ""
