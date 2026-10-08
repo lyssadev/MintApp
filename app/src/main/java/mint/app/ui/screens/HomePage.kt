@@ -95,10 +95,14 @@ import mint.app.core.model.DownloadItem
 import mint.app.core.model.DownloadStatus
 import mint.app.core.model.MediaFormat
 import mint.app.core.model.MediaItem
+import mint.app.core.model.PlaylistResult
+import mint.app.core.prefs.DownloadPreferences
 import mint.app.R
+import mint.app.resolution.PlaylistQuality
 import mint.app.service.DownloadService
 import mint.app.resolution.ResolverRegistry
 import mint.app.ui.components.IndeterminateProgressBar
+import mint.app.ui.components.PlaylistSection
 import mint.app.ui.components.ResolverDetailsDialog
 import mint.app.ui.components.StreamInfoCard
 import mint.app.ui.components.formatBytes
@@ -108,6 +112,7 @@ sealed interface ResolveState {
     data object Idle : ResolveState
     data object Loading : ResolveState
     data class Success(val info: MediaItem) : ResolveState
+    data class Playlist(val result: PlaylistResult) : ResolveState
     data class Error(val message: String) : ResolveState
 }
 
@@ -116,19 +121,70 @@ object HomeSession {
     var state by mutableStateOf<ResolveState>(ResolveState.Idle)
     var activeDownloadId by mutableStateOf<String?>(null)
     var startingFormatId by mutableStateOf<String?>(null)
+    var playlistSelected by mutableStateOf<Set<String>>(emptySet())
+    var playlistQuality by mutableStateOf(PlaylistQuality.options.first())
+    var playlistLoadingMore by mutableStateOf(false)
+    private var pageSize = PlaylistQuality.PAGE_SIZE
     val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+
+    fun init(context: Context) {
+        pageSize = DownloadPreferences.playlistPageSize(context.applicationContext)
+    }
 
     fun resolveUrl(url: String, fallbackError: String) {
         link = url
         activeDownloadId = null
         startingFormatId = null
+        playlistSelected = emptySet()
+        playlistLoadingMore = false
         state = ResolveState.Loading
         scope.launch {
             state = try {
                 mint.app.resolution.EngineSetup.await()
-                ResolveState.Success(ResolverRegistry.resolve(url))
+                if (ResolverRegistry.isPlaylist(url)) {
+                    ResolveState.Playlist(ResolverRegistry.resolvePlaylist(url, 0, pageSize))
+                } else {
+                    ResolveState.Success(ResolverRegistry.resolve(url))
+                }
             } catch (e: Exception) {
                 ResolveState.Error(e.message ?: fallbackError)
+            }
+        }
+    }
+
+    fun togglePlaylistSelection(id: String) {
+        playlistSelected = if (id in playlistSelected) playlistSelected - id else playlistSelected + id
+    }
+
+    fun togglePlaylistAll() {
+        val result = (state as? ResolveState.Playlist)?.result ?: return
+        val allIds = result.entries.map { it.id }.toSet()
+        playlistSelected = if (allIds.isNotEmpty() && playlistSelected.containsAll(allIds)) {
+            emptySet()
+        } else {
+            allIds
+        }
+    }
+
+    fun loadMorePlaylist() {
+        val current = (state as? ResolveState.Playlist)?.result ?: return
+        if (playlistLoadingMore || !current.hasMore) return
+        playlistLoadingMore = true
+        scope.launch {
+            try {
+                val more = ResolverRegistry.resolvePlaylist(current.originalUrl, current.entries.size, pageSize)
+                val existing = current.entries.map { it.id }.toSet()
+                val merged = current.entries + more.entries.filterNot { it.id in existing }
+                state = ResolveState.Playlist(
+                    current.copy(
+                        entries = merged,
+                        totalCount = if (more.totalCount > 0) more.totalCount else merged.size,
+                        hasMore = more.hasMore && more.entries.isNotEmpty(),
+                    ),
+                )
+            } catch (_: Exception) {
+            } finally {
+                playlistLoadingMore = false
             }
         }
     }
@@ -136,6 +192,8 @@ object HomeSession {
     fun reset() {
         activeDownloadId = null
         startingFormatId = null
+        playlistSelected = emptySet()
+        playlistLoadingMore = false
         state = ResolveState.Idle
     }
 }
@@ -190,6 +248,29 @@ fun HomePage(
         }
     }
 
+    val startPlaylistDownload: () -> Unit = {
+        val result = (HomeSession.state as? ResolveState.Playlist)?.result
+        if (result != null) {
+            val quality = HomeSession.playlistQuality
+            val chosen = result.entries.filter { it.id in HomeSession.playlistSelected }
+            chosen.forEach { entry ->
+                DownloadService.start(
+                    context,
+                    entry.url,
+                    quality.selector,
+                    entry.title,
+                    quality.format,
+                    0L,
+                    quality.hasAudio,
+                    entry.thumbnailUrl,
+                    null,
+                    emptyMap(),
+                )
+            }
+            HomeSession.playlistSelected = emptySet()
+        }
+    }
+
     AnimatedVisibility(
         visibleState = visibleState,
         enter = fadeIn(animationSpec = tween(durationMillis = 600, easing = FastOutSlowInEasing)),
@@ -236,6 +317,7 @@ fun HomePage(
                         ) {
                             ResolveResult(
                                 startDownload = startDownload,
+                                onPlaylistDownload = startPlaylistDownload,
                                 compact = true,
                             )
                         }
@@ -310,7 +392,10 @@ fun HomePage(
                         HomeHero()
                     }
                     Spacer(modifier = Modifier.height(20.dp))
-                    ResolveResult(startDownload = startDownload)
+                    ResolveResult(
+                        startDownload = startDownload,
+                        onPlaylistDownload = startPlaylistDownload,
+                    )
                     Spacer(modifier = Modifier.height(120.dp))
                 }
                 }
@@ -444,6 +529,7 @@ private fun HomeHero() {
 @Composable
 private fun ResolveResult(
     startDownload: (MediaFormat, Int?) -> Unit,
+    onPlaylistDownload: () -> Unit,
     compact: Boolean = false,
 ) {
     AnimatedContent(
@@ -468,6 +554,20 @@ private fun ResolveResult(
                     text = state.message,
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.error,
+                )
+            }
+            state is ResolveState.Playlist -> {
+                PlaylistSection(
+                    result = state.result,
+                    selected = HomeSession.playlistSelected,
+                    quality = HomeSession.playlistQuality,
+                    loadingMore = HomeSession.playlistLoadingMore,
+                    maxListHeight = if (compact) 220.dp else 320.dp,
+                    onToggle = { id -> HomeSession.togglePlaylistSelection(id) },
+                    onToggleAll = { HomeSession.togglePlaylistAll() },
+                    onQualityChange = { HomeSession.playlistQuality = it },
+                    onLoadMore = { HomeSession.loadMorePlaylist() },
+                    onDownload = onPlaylistDownload,
                 )
             }
             state is ResolveState.Success -> {
