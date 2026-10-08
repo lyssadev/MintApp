@@ -51,6 +51,19 @@
     <string name="share_resolving">Link wird aufgelöst…</string>
     <string name="share_unsupported">Nur YouTube-Links werden unterstützt</string>
 
+    <!-- Playlist -->
+    <string name="capability_playlist">Playlists</string>
+    <string name="playlist_count">%1$d Videos</string>
+    <string name="playlist_quality">Qualität</string>
+    <string name="playlist_selected_count">%1$d ausgewählt</string>
+    <string name="playlist_select_all">Alle auswählen</string>
+    <string name="playlist_clear_all">Auswahl aufheben</string>
+    <string name="playlist_load_more">Mehr laden</string>
+    <string name="playlist_download_selected">%1$d herunterladen</string>
+    <string name="playlist_empty">Diese Playlist enthält keine herunterladbaren Videos</string>
+    <string name="settings_playlist_page_size">Playlist-Seitengröße</string>
+    <string name="settings_playlist_page_size_subtitle">Gleichzeitig geladene Videos</string>
+
     <!-- Downloads -->
     <string name="downloads_title">Downloads</string>
     <string name="downloads_section_in_progress">Läuft</string>
